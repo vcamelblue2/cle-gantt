@@ -7,6 +7,7 @@ verify_ssl = true
 
 [packages]
 pywebview = "*"
+pyinstaller = "*"
 
 [requires]
 python_version = "3.9"
