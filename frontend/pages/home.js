@@ -2,7 +2,7 @@ import {pass, none, smart, Use, f, Extended, Placeholder, Bind, RenderApp, toInl
 import { NavSidebarLayout } from "../libs/cle/layouts/layouts.js"
 import { ganttModelApi } from "../model/api.js"
 
-import { BackendApi } from "../api/backend_api.js"
+import { Api } from "../api/backend_api.js"
 
 const Navbar = (navbarContents={ div: { text: "Nav", 'ha.style.fontSize': "2rem" }})=>({ div: {
 
@@ -586,76 +586,6 @@ const Gantt = { div: {
 
 }}
 
-const Api = { Controller: {
-
-  id: "api",
-
-  onInit: async $ => {
-    await $.this.getProjects()
-    await $.this.getProject()
-    console.log($.this.project)
-  },
-
-  def: {
-    getProjects: async ($)=>{
-      $.scope.projects = await ganttModelApi.getProjects()
-    },
-    getProject: async ($, id='p0')=>{
-      $.scope.project = await ganttModelApi.getProject(id)
-    },
-
-    editActivity: async ($, project_id, activity, edits)=>{
-      await ganttModelApi.editActivity(project_id, activity, edits)
-      await $.this.getProject()
-    },
-    addActivity: async ($, project_id, name, color, start, len)=>{
-      await ganttModelApi.addActivity(project_id, {name: name, color: color, start: start, len: len})
-      await $.this.getProject()
-    },
-    deleteActivity: async ($, project_id, activity_id)=>{
-      await ganttModelApi.deleteActivity(project_id, activity_id)
-      await $.this.getProject()
-    },
-
-    moveActivityUp: async ($, project_id, activity_idx)=>{
-      await ganttModelApi.moveActivityUp(project_id, activity_idx)
-      await $.this.getProject()
-    },
-    moveActivityDown: async ($, project_id, activity_idx)=>{
-      await ganttModelApi.moveActivityDown(project_id, activity_idx)
-      await $.this.getProject()
-    },
-    moveActivityLeft: async ($, project_id, activity)=>{
-      await ganttModelApi.moveActivityLeft(project_id, activity)
-      await $.this.getProject()
-    },
-    moveActivityRight: async ($, project_id, activity)=>{
-      await ganttModelApi.moveActivityRight(project_id, activity)
-      await $.this.getProject()
-    },
-    incrementActivityLen: async ($, project_id, activity)=>{
-      await ganttModelApi.incrementActivityLen(project_id, activity)
-      await $.this.getProject()
-    },
-    decrementActivityLen: async ($, project_id, activity)=>{
-      await ganttModelApi.decrementActivityLen(project_id, activity)
-      await $.this.getProject()
-    },
-
-    editSubTasks: async ($, project_id, activity, subTasks, fullRefresf=false)=>{
-      await ganttModelApi.editSubTasks(project_id, activity, subTasks)
-      if(fullRefresf){
-        await $.this.getProject()
-      }
-    },
-    editSubTask: async ($, project_id, activity, subtask, edits, fullRefresf=false)=>{
-      await ganttModelApi.editSubTask(project_id, activity, subtask, edits)
-      if(fullRefresf){
-        await $.this.getProject()
-      }
-    },
-  }
-}}
 
 
 export const HomePage = async (state)=>{ return { 
@@ -676,7 +606,6 @@ export const HomePage = async (state)=>{ return {
     '':[
       
       Api,
-      BackendApi,
 
       MainLayout({
 

@@ -1,11 +1,4 @@
-from .api_decorator import expose_to_js, RegisteredApi
-
-class HelloDemoController:
-	
-	@staticmethod
-	@expose_to_js()
-	def hello():
-		print("hello request")
-		return "hello"
+from .api_decorator import RegisteredApi
+from .apis.projects import ProjectsController
 
 class ExposedApi_V1(RegisteredApi): pass
