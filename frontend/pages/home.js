@@ -1,7 +1,5 @@
 import {pass, none, smart, Use, f, Extended, Placeholder, Bind, RenderApp, toInlineStyle, LE_LoadScript, LE_LoadCss, LE_InitWebApp, LE_BackendApiMock, Alias} from "../libs/cle/lib/caged-le.js"
 import { NavSidebarLayout } from "../libs/cle/layouts/layouts.js"
-import { ganttModelApi } from "../model/api.js"
-
 import { Api } from "../api/backend_api.js"
 
 const Navbar = (navbarContents={ div: { text: "Nav", 'ha.style.fontSize': "2rem" }})=>({ div: {
@@ -193,7 +191,7 @@ const openActivityEditor = $=>{
 
 
 // $$ means sub app / new dynamic render
-const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel}={})=>({ div: {
+const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={})=>({ div: {
 
   props: {
     parent: parent, 
@@ -225,6 +223,7 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel}={})=>({ div
         { br: {}},
 
         { button: { text: "Cancel", handle: { onclick: $=>onCancel() }}},
+        { button: { text: "Delete", handle: { onclick: $=>onDelete() }, meta: {if: $=>onDelete !== undefined}}},
         { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, name: $.scope.name, description: $.scope.description}) }}}
       ],
 
@@ -268,7 +267,13 @@ const openSubTaskEditor = $=>{
     app.destroy()
     app = undefined
   }
-  app = RenderApp(document.body, $$GanttSubTaskEditor({parent: $.this, subtask: $.scope.subtask, onConfirm: onConfirm, onCancel: onCancel}))
+  let onDelete = ()=>{
+    $.scope.subtasks = $.scope.subtasks.filter(s=>s.idx!==$.scope.subtask.idx)
+    $.le.api.editSubTasks($.scope.project.id, $.scope.activity, $.scope.activity.subtasks, true)
+    app.destroy()
+    app = undefined
+  }
+  app = RenderApp(document.body, $$GanttSubTaskEditor({parent: $.this, subtask: $.scope.subtask, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
 }
 
 
@@ -406,6 +411,7 @@ const GanttRowActivityGraph = { div: {
     else {
       $.this.subtasks = [...$.this.subtasks, {idx: idx, name: isMilestone ? "M" : "T", description: ""}] // add
     }
+    console.log("removing", idx, subtask)
     // $.scope.activity.subtasks = $.this.subtasks // in caso di no alias..mettere poi false in api qui.. 
     $.le.api.editSubTasks($.scope.project.id, $.scope.activity, $.scope.activity.subtasks, true)
   },
@@ -596,12 +602,6 @@ export const HomePage = async (state)=>{ return {
     let_projects: undefined,
     let_project: undefined,
     let_today: (()=>{ let d = new Date; return (d.getFullYear()-2000) +"-"+ (d.getMonth()+1) +"-"+ (d.getDate())})(),
-
-    def_editActivity: async ($, project_id, activity, edits)=>{
-      await ganttModelApi.editActivity(project_id, activity, edits)
-      $.this.project = await ganttModelApi.getProject()
-    },
-
 
     '':[
       
