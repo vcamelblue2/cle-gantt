@@ -383,6 +383,8 @@ const GanttRowActivityGraph = { div: {
       handle_onclick: ($, e)=>{ e.stopPropagation(); $.this.openActivityEditor()},
 
       text: f`@activity.name`, 
+
+      a_style: "top: -23px; position: absolute; color: black; font-weight: 700;"
     }},
 
     { div: { meta: { forEach: "subtask", of: f`@subtasks`},
@@ -416,7 +418,7 @@ const GanttRowActivityGraph = { div: {
     backgroundColor: $.scope.activity.color || "green",
     color: "white",
     textAlign: "center",
-    overflow: "auto",
+    // overflow: "auto",
     userSelect: "none",
     position: "relative"
   })
@@ -437,7 +439,7 @@ const GanttRow = { div: {   meta: {forEach: "activity", of: f`@activities || []`
     // marginBottom: "10px",
     borderTop: "0.5px solid black",
     borderBottom: $.meta.isLast ? "0.5px solid black" : "none",
-    paddingTop: "5px",
+    paddingTop: "25px",
     paddingBottom: "5px",
   })
 
