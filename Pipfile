@@ -10,7 +10,9 @@ pywebview = "*"
 pyinstaller = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.7"
 
 [scripts]
-build="pyinstaller --onedir -w --add-data=./data:./data --add-data=./frontend:./frontend  app.py"
+dev_run="python app.py"
+build_mac="pyinstaller --onedir -w --add-data=data/:data/ --add-data=frontend/:frontend/  app.py"
+build_win="pyinstaller --onedir -w --add-data './data;./data' --add-data './frontend;./frontend'  app.py"

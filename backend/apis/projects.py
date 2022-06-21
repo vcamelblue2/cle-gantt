@@ -1,11 +1,16 @@
 import json, os, sys
+import datetime as dt
 
 from ..api_decorator import expose_to_js
 
-base_path = os.path.dirname(sys.executable)
-print("base path", base_path)
-db_path = base_path+"/data/db.json"
-print("db path", db_path)
+# base_path = os.path.dirname(sys.executable)
+# print("base path", base_path)
+# db_path = base_path+"/data/db.json"
+# print("db path", db_path)
+
+
+db_path = "./data/db.json"
+db_backup_path = "./data/db_backup_{}.json"
 
 class ProjectsModel:
 	def __init__(self, auto_init=True):
@@ -33,6 +38,11 @@ class ProjectsModel:
 				]
 			}]
 
+			try: 
+				os.mkdir(os.path.dirname(db_path))
+				print("CREATED DATA FOLDER IN: ", db_path)
+			except: pass
+
 			if not os.path.exists(db_path):
 				self._store()
 			else:
@@ -45,6 +55,13 @@ class ProjectsModel:
 			db = {'task_id_gen': self.task_id_gen, 'projects': self.projects}
 			json.dump(db, f)
 
+	def _store_backup(self):
+		print("store backup")
+
+		with open(db_backup_path.format(dt.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")), "w") as f:
+			db = {'task_id_gen': self.task_id_gen, 'projects': self.projects}
+			json.dump(db, f)
+
 
 model = ProjectsModel(True)
 
@@ -54,7 +71,13 @@ def Filter(arr, condition): return list(filter(condition, arr))
 def Map(arr, condition): return list(map(condition, arr))
 
 class ProjectsController:
-    
+	
+	@staticmethod
+	@expose_to_js()
+	def storeBackup():
+		model._store_backup()
+		return {}
+	
 	@staticmethod
 	@expose_to_js()
 	def getProjects():
