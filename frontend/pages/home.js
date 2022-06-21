@@ -1,57 +1,8 @@
 import {pass, none, smart, Use, f, Extended, Placeholder, Bind, RenderApp, toInlineStyle, LE_LoadScript, LE_LoadCss, LE_InitWebApp, LE_BackendApiMock, Alias} from "../libs/cle/lib/caged-le.js"
-import { NavSidebarLayout } from "../libs/cle/layouts/layouts.js"
+import { MainLayout } from "../layouts/main_layout.js"
 import { Api } from "../api/backend_api.js"
 
-const Navbar = (navbarContents={ div: { text: "Nav", 'ha.style.fontSize': "2rem" }})=>({ div: {
-
-    'a.style': {
-        backgroundColor: "#2d3436", //"#2d3436",
-        color: "#dddddd",
-        height: "60px",
-        padding: "10px 1rem"
-    },
-
-    text: navbarContents
-}})
-
-const Sidebar = (sidebarContents)=>({ div: {
-
-    'a.style': {
-        backgroundColor: "#2d3436",
-        color: "#dddddd",
-        minHeight: "100%",
-        borderRight: "0.25px solid #aaaaaa",
-        padding: "10px 1rem"
-    },
-    
-    "=>": [
-        { div: { 'a.style': {fontWeight: "100", fontSize: "1.9rem", paddingBottom: "0px", paddingLeft: "10px", backgroundColor: "#f1c40f", color: "white", display: "flex", justifyContent: "center", position: "sticky", top: "10px"}, text: "Gantt Logo"}},
-        
-        ...sidebarContents,
-    ]
-}})
-
-const MainContent = (Components)=>({ div: {
-    'a.style': {
-        minHeight: "calc(100vh - 60px)",
-        backgroundColor: 'white',
-        padding: "10px"
-    },
-
-    "=>": Components
-}})
-
-const MainLayout = ({NavbarContents, SidebarComponents, MainContentComponents}={})=>Extended(NavSidebarLayout({
-    navbar: Navbar(NavbarContents),
-    sidebar: Sidebar(SidebarComponents),
-    main_content: MainContent(MainContentComponents)
-}))
-
-
-const NUM_DAYS = 365*2
-const DAY_SIZE_PX = 18
-const HEDADER_WIDTH = 300
-const GRAPH_WIDTH = ((NUM_DAYS*DAY_SIZE_PX)+(HEDADER_WIDTH)+20)
+import { NUM_DAYS, DAY_SIZE_PX, HEDADER_WIDTH, GRAPH_WIDTH } from "../settings/settings.js"
 
 const getCalendar = (today_date = new Date(), num_days=NUM_DAYS, group_by_year_month=false)=>{
   const ONE_DAY = 24*60*60*1000
@@ -610,22 +561,26 @@ export const HomePage = async (state)=>{ return {
       MainLayout({
 
         NavbarContents:[
-
           { span: { text: "Gantt Chart", a_style: "font-size: 1.9rem; margin-left: 15px; margin-right: 15px;" }}
-
         ], 
+
         SidebarComponents:[
-          { div: { a_style: "width: 200px", '': [
+          { div: {
+            a_style: "width: 200px", 
+            '': [
             { h4: "Projects"},
             { h5: {   meta: { forEach: "proj", of: f`@projects || []`},
               text: f`'- '+@proj.name`,
               a_style: "margin-left: 25px"
             }}
-          ]}}
+            ]
+          }}
         ], 
+
         MainContentComponents:[
           Gantt
         ]
+
       }),
 
 
@@ -634,12 +589,13 @@ export const HomePage = async (state)=>{ return {
         '.grid-layout {grid-template-columns: auto auto auto auto auto auto;} ',
         '.navbar {position: sticky; top: 0px; z-index: 1000; }'
       ]}}
+
     ],
 
     attrs: { style: "width: 100%; height: 100%; padding: 0px; margin: 0px;" },
     css: [ `* { box-sizing: border-box !important;} body { padding: 0px; margin: 0px; }` ],
-  }
-}}
+
+}}}
 
 // -per avere subactivity senza ricorsione: li metto tutti come activity, magari con link al parent id, ma soprattutto costruisco "l'indice" come numero molto grande (tipo ragionamento a bit) es: 100 (parent), 110 (1st child), 111 (1st subchild)..poi ordino prima di mostrare..
 // potrei anche costruire indice come Array.apply.tanto mi basta metterli vicino e fare un padEnd.. una cosa intelligente sarebbe andare a botte di 2 cifre: l''es di prima diventa: [01,00,00] (parent), [01, 01, 00] (1st child), [01, 01, 01] (1st subchild)
