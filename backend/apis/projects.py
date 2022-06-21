@@ -77,15 +77,23 @@ class ProjectsController:
 	def storeBackup():
 		model._store_backup()
 		return {}
+
+	@staticmethod
+	@expose_to_js()
+	def forceReloadData():
+		model._load()
+		return {}
 	
 	@staticmethod
 	@expose_to_js()
 	def getProjects():
+		# model._load()
 		return list(map(lambda p: {"id": p['id'], "name": p['name']}, model.projects))
 
 	@staticmethod
 	@expose_to_js()
 	def getProject(id='p0'):
+		# model._load()
 		return list(filter(lambda p: p['id']==id, model.projects))[0]
 
 	@staticmethod

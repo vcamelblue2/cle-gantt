@@ -34,6 +34,12 @@ export const Api = { Controller: {
     storeBackup: async ($)=>{
       await pywebview.api.exec("ProjectsController.storeBackup")
     },
+
+    forceReloadData: async ($)=>{
+      await pywebview.api.exec("ProjectsController.forceReloadData")
+      await $.this.getProjects()
+      await $.this.getProject()
+    },
     
     getProjects: async ($)=>{
       $.scope.projects = await pywebview.api.exec("ProjectsController.getProjects")

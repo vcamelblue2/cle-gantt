@@ -574,7 +574,10 @@ export const HomePage = async (state)=>{ return {
             { h5: {   meta: { forEach: "proj", of: f`@projects || []`},
               text: f`'- '+@proj.name`,
               a_style: "margin-left: 25px"
-            }}
+            }},
+            { button: {text: "Reload Data", h_onclick: $=>$.le.api.forceReloadData(), a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 15px; padding: 10px;color: #dddddd; cursor: pointer;"}},
+            { button: {text: "Execute Backup Now", h_onclick: $=>$.le.api.storeBackup(), a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 10px; padding: 10px;color: #dddddd; cursor: pointer;"}}
+
             ]
           }}
         ], 
