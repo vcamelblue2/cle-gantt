@@ -1,8 +1,26 @@
+const pywebviewReady = new Promise((resolve, reject)=>{
+
+  console.log("setting up onpywebviewready event..")
+  
+  let notReady = setTimeout(()=>{
+    console.log("PYWEBVIEW NOT READY..ABORTING..")
+    reject()
+  }, 15000) // 15 sec
+
+  window.addEventListener('pywebviewready', function() {
+    clearTimeout(notReady)
+    resolve()
+  });
+
+})
+
 export const Api = { Controller: {
 
   id: "api",
 
   onInit: async $ => {
+    await pywebviewReady
+    
     console.log(pywebview)
     console.log(pywebview.api)
     console.log(Object.keys(pywebview.api))
@@ -13,6 +31,10 @@ export const Api = { Controller: {
   },
 
   def: {
+    storeBackup: async ($)=>{
+      await pywebview.api.exec("ProjectsController.storeBackup")
+    },
+    
     getProjects: async ($)=>{
       $.scope.projects = await pywebview.api.exec("ProjectsController.getProjects")
     },
