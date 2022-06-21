@@ -1,6 +1,11 @@
-import json, os
+import json, os, sys
 
 from ..api_decorator import expose_to_js
+
+base_path = os.path.dirname(sys.executable)
+print("base path", base_path)
+db_path = base_path+"/data/db.json"
+print("db path", db_path)
 
 class ProjectsModel:
 	def __init__(self, auto_init=True):
@@ -11,7 +16,7 @@ class ProjectsModel:
 		print("load")
 
 		try: 
-			with open("./data/db.json", "r") as f:
+			with open(db_path, "r") as f:
 				db = json.load(f)
 				self.task_id_gen = db['task_id_gen']
 				self.projects = db['projects']
@@ -28,7 +33,7 @@ class ProjectsModel:
 				]
 			}]
 
-			if not os.path.exists("./data/db.json"):
+			if not os.path.exists(db_path):
 				self._store()
 			else:
 				raise Exception("Erro During Model Init")
@@ -36,7 +41,7 @@ class ProjectsModel:
 	def _store(self):
 		print("store")
 
-		with open("./data/db.json", "w") as f:
+		with open(db_path, "w") as f:
 			db = {'task_id_gen': self.task_id_gen, 'projects': self.projects}
 			json.dump(db, f)
 

@@ -11,3 +11,6 @@ pyinstaller = "*"
 
 [requires]
 python_version = "3.9"
+
+[scripts]
+build="pyinstaller --onedir -w --add-data=./data:./data --add-data=./frontend:./frontend  app.py"
