@@ -404,7 +404,7 @@ const GanttRowActivityGraph = { div: {
         position: "absolute", 
         top: "0px", 
         padding: "4px", 
-        backgroundColor: $.scope.subtask.name === "M" ? 'red' : "orange", 
+        backgroundColor: $.scope.subtask.name === "M" ? 'red' : ($.scope.subtask.name === "D" ? "#00c80099" : "orange"), 
         textAlign: "center"
       })
     }}
