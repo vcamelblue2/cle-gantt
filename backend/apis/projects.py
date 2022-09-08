@@ -216,8 +216,13 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def editSubTask(project_id, activity, subTask, edits):
-		subtask_ptr = Find(Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])['subtasks'], lambda s: s['idx']==subTask['idx'])
-		subtask_ptr['idx'] = edits['idx']
+		subtasks_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])['subtasks']
+		subtask_ptr = Find(subtasks_ptr, lambda s: s['idx']==subTask['idx'])
+
+		if subtask_ptr['idx'] != edits['newIdx'] and len(Filter(subtasks_ptr, lambda s: s['idx']==edits['newIdx'])) > 0:
+			raise Exception("Already Exist, cannot move!")
+
+		subtask_ptr['idx'] = edits['newIdx']
 		subtask_ptr['name'] = edits['name']
 		subtask_ptr['description'] = edits['description']
 

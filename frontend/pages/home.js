@@ -149,6 +149,9 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={
     idx: subtask.idx,
     name: subtask.name,
     description: subtask.description,
+
+    newIdx: subtask.idx,
+    position: Alias($=>$.this.newIdx/DAY_SIZE_PX, ($,v)=>{$.this.newIdx=v*DAY_SIZE_PX})
   },
 
   handle: { onclick: ($, evt) => { evt.stopPropagation(); onCancel() } },
@@ -166,25 +169,30 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={
           'ha.value': Bind($ => $.scope.name)
         }},
 
+        { h5: { text: "Position" }},
+        { input: { 
+          'ha.value': Bind($ => $.scope.position)
+        }},
+
         { h5: { text: "Description" }},
         { textarea: { 
-          'ha.value': Bind($ => $.scope.description),  a_style: "height: 100px"
+          'ha.value': Bind($ => $.scope.description),  a_style: "height: 150px"
         }},
         { br: {}},
         { br: {}},
 
         { button: { text: "Cancel", handle: { onclick: $=>onCancel() }}},
         { button: { text: "Delete", handle: { onclick: $=>onDelete() }, meta: {if: $=>onDelete !== undefined}}},
-        { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, name: $.scope.name, description: $.scope.description}) }}}
+        { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, newIdx: $.scope.newIdx, name: $.scope.name, description: $.scope.description}) }}}
       ],
 
       a_style: `
-        width: 50%;
-        height: 50%;
+        width: 60%;
+        height: 70%;
         position: relative;
         background: white;
-        top: 25%;
-        left: 25%;
+        top: 15%;
+        left: 20%;
         border: 3px solid black;
         border-radius: 25px;
         padding: 25px;
@@ -390,9 +398,17 @@ const GanttRowActivityGraph = { div: {
     { div: { meta: { forEach: "subtask", of: f`@subtasks`},
 
       handle_oncontextmenu: ($,e)=>{
-        openSubTaskEditor($)
+        if(!$.scope.has_edits){
+          $.scope.addOrRemoveSubtask(Math.floor((e.clientX-$.parent.el.getBoundingClientRect().left)/DAY_SIZE_PX)*DAY_SIZE_PX, e.metaKey || e.altKey || e.ctrlKey)
+        }
         e.preventDefault();
         return false;
+      },
+          
+      handle_onclick: ($, e)=>{
+        console.log(e)
+        openSubTaskEditor($)
+        e.stopPropagation()
       },
 
       text: f`@subtask.name`,
