@@ -411,6 +411,13 @@ const GanttRowActivityGraph = { div: {
         e.stopPropagation()
       },
 
+      handle_onmouseover: $ => {
+        $.le.popover_service.show($.scope.subtask.description)
+      },
+      handle_onmouseout: $ => {
+        $.le.popover_service.hide()
+      },
+
       text: f`@subtask.name`,
 
       a_style: $=>({
@@ -561,6 +568,33 @@ const Gantt = { div: {
 
 }}
 
+const PopOverService = { Controller: { meta: {hasViewChilds: true},
+  id: "popover_service",
+
+  let_content: undefined,
+  let_timeout: undefined,
+
+  def: {
+    show: ($, text) => { 
+      clearTimeout($.this.timeout)
+      $.this.content = text 
+    },
+    hide: $ => { 
+      clearTimeout($.this.timeout)
+      $.this.timeout = setTimeout(()=>{ $.this.content = undefined}, 300) 
+    },
+  },
+  
+
+  view: 
+
+    { div: { meta: {if: f`@content !== undefined`},
+
+      a_style: "position: fixed; right: calc(50% - 20%); width: 40%; bottom: 25px; min-height: 80px; max-height: 600px; padding: 10px; z-index: 1000; background-color: white; border: 1px solid #aaaaaa;",
+
+      '': {i: $ => $.scope.content.split("\n").join("; ") || "(Nothing To Show)" }
+    }}
+}}
 
 
 export const HomePage = async (state)=>{ return { 
@@ -603,6 +637,8 @@ export const HomePage = async (state)=>{ return {
         ]
 
       }),
+
+      PopOverService,
 
 
       // CSS overwriter 
