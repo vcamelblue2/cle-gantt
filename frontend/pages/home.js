@@ -4,6 +4,17 @@ import { Api } from "../api/backend_api.js"
 
 import { NUM_DAYS, DAY_SIZE_PX, HEDADER_WIDTH, GRAPH_WIDTH } from "../settings/settings.js"
 
+const SUBTASK_COLOR_MAPPING = {
+	M: 'red',
+	W: '#ff6b6b',
+	D: "#00c80099",
+	DEFAULT: "orange"
+}
+
+const getColorTask = (color)=>{
+	return SUBTASK_COLOR_MAPPING[color] || SUBTASK_COLOR_MAPPING.DEFAULT
+}
+
 const getCalendar = (today_date = new Date(), num_days=NUM_DAYS, group_by_year_month=false)=>{
   const ONE_DAY = 24*60*60*1000
 
@@ -421,21 +432,21 @@ const GanttRowActivityGraph = { div: {
       text: f`@subtask.name`,
 
       a_style: $=>({
-        width: DAY_SIZE_PX+"px",  
+        width: DAY_SIZE_PX+"px",
         height: "30px", 
-        marginLeft: $.scope.subtask.idx + "px", 
+        marginLeft: ($.scope.subtask.idx+(Math.ceil($.scope.subtask.idx/DAY_SIZE_PX)/30*0.5)) + "px", 
         position: "absolute", 
         top: "0px", 
         padding: "4px", 
-        backgroundColor: $.scope.subtask.name === "M" ? 'red' : ($.scope.subtask.name === "D" ? "#00c80099" : "orange"), 
+        backgroundColor: getColorTask($.scope.subtask.name),
         textAlign: "center"
       })
     }}
   ],
 
   a_style: $=>({
-    marginLeft: ($.this.tmp_offset+$.scope.activity.start * DAY_SIZE_PX) + "px",
-    width: ($.scope.activity.len*DAY_SIZE_PX)+"px",
+    marginLeft: ($.this.tmp_offset + $.scope.activity.start * DAY_SIZE_PX + Math.ceil($.scope.activity.start/30*0.5)+1) + "px", // for the header row
+    width: ($.scope.activity.len*DAY_SIZE_PX + Math.ceil($.scope.activity.start/30*0.5)+1)+"px",
     height: "30px",
     display: "inline-block",
     backgroundColor: $.scope.activity.color || "green",
