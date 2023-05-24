@@ -24,7 +24,7 @@ export const Sidebar = (sidebarContents)=>({ div: {
     },
     
     "=>": [
-        { div: { 'a.style': {fontWeight: "100", fontSize: "1.9rem", paddingBottom: "0px", paddingLeft: "10px", backgroundColor: "#f1c40f", color: "white", display: "flex", justifyContent: "center", position: "sticky", top: "10px"}, text: "Gantt Logo"}},
+        { div: { 'a.style': {fontWeight: "100", fontSize: "1.9rem", paddingBottom: "0px", paddingLeft: "10px", backgroundColor: "#f1c40f", color: "white", display: "flex", justifyContent: "center", position: "sticky", top: "10px"}, text: "App Logo"}},
         
         ...sidebarContents,
     ]

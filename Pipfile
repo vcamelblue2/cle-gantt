@@ -6,13 +6,13 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-pywebview = "*"
+pywebview = "==4.1"
 pyinstaller = "*"
 
 [requires]
 python_version = "3.7"
 
 [scripts]
-dev="python app.py"
+dev="python app.py DEV"
 build_mac="pyinstaller --onedir -w --add-data=data/:data/ --add-data=frontend/:frontend/  app.py"
 build_win="pyinstaller --onedir -w --add-data './data;./data' --add-data './frontend;./frontend'  app.py"

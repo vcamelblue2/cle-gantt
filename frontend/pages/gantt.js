@@ -1,6 +1,9 @@
 import {pass, none, smart, Use, f, Extended, Placeholder, Bind, RenderApp, toInlineStyle, LE_LoadScript, LE_LoadCss, LE_InitWebApp, LE_BackendApiMock, Alias} from "../libs/cle/lib/caged-le.js"
+import {Router} from "../libs/cle/routing/lite_routing.js"
+
 import { MainLayout } from "../layouts/main_layout.js"
-import { Api } from "../api/backend_api.js"
+import { RoutingButtonLink } from "../components/routing-button.component.js"
+import { Api, pywebviewReady } from "../api/backend_api.js"
 
 import { NUM_DAYS, DAY_SIZE_PX, HEDADER_WIDTH, GRAPH_WIDTH } from "../settings/settings.js"
 
@@ -79,9 +82,13 @@ const $$GanttActivityEditor = ({parent, activity, onConfirm, onCancel, onDelete}
 
         { h5: { text: "Color" }},
         { input: { 
-          'ha.value': Bind($ => $.scope.color)
+          'ha.type': 'color',
+          'a.value': Bind($ => $.scope.color)
         }},
-        { div: { text: "", a_style: $=>({backgroundColor: $.scope.color, width: "40px", height: "20px"}) }},
+        { input: { 
+          'a.value': Bind($ => $.scope.color)
+        }},
+        // { div: { text: "", a_style: $=>({backgroundColor: $.scope.color, width: "40px", height: "20px"}) }},
 
         { h5: { text: "Start" }},
         { input: { 
@@ -160,6 +167,7 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={
     idx: subtask.idx,
     name: subtask.name,
     description: subtask.description,
+    len: subtask.len || 1,
 
     newIdx: subtask.idx,
     position: Alias($=>$.this.newIdx/DAY_SIZE_PX, ($,v)=>{$.this.newIdx=v*DAY_SIZE_PX})
@@ -185,6 +193,11 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={
           'ha.value': Bind($ => $.scope.position)
         }},
 
+        { h5: { text: "Length" }},
+        { input: { 
+          'ha.value': Bind($ => $.scope.len)
+        }},
+
         { h5: { text: "Description" }},
         { textarea: { 
           'ha.value': Bind($ => $.scope.description),  a_style: "height: 150px"
@@ -194,7 +207,7 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={
 
         { button: { text: "Cancel", handle: { onclick: $=>onCancel() }}},
         { button: { text: "Delete", handle: { onclick: $=>onDelete() }, meta: {if: $=>onDelete !== undefined}}},
-        { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, newIdx: $.scope.newIdx, name: $.scope.name, description: $.scope.description}) }}}
+        { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, newIdx: $.scope.newIdx, name: $.scope.name, len: $.scope.len, description: $.scope.description}) }}}
       ],
 
       a_style: `
@@ -207,6 +220,7 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={
         border: 3px solid black;
         border-radius: 25px;
         padding: 25px;
+        overflow-y: auto;
       `,
 
     }}
@@ -379,7 +393,7 @@ const GanttRowActivityGraph = { div: {
       $.this.subtasks = $.this.subtasks.filter(s=>s.idx!==idx)
     }
     else {
-      $.this.subtasks = [...$.this.subtasks, {idx: idx, name: isMilestone ? "M" : "T", description: ""}] // add
+      $.this.subtasks = [...$.this.subtasks, {idx: idx, name: isMilestone ? "M" : "T", description: "", len: 1}] // add
     }
     console.log("removing", idx, subtask)
     // $.scope.activity.subtasks = $.this.subtasks // in caso di no alias..mettere poi false in api qui.. 
@@ -432,7 +446,7 @@ const GanttRowActivityGraph = { div: {
       text: f`@subtask.name`,
 
       a_style: $=>({
-        width: DAY_SIZE_PX+"px",
+        width: (($.subtask.len || 1) * DAY_SIZE_PX)+"px",
         height: "30px", 
         marginLeft: ($.scope.subtask.idx+(Math.ceil($.scope.subtask.idx/DAY_SIZE_PX)/30*0.5)) + "px", 
         position: "absolute", 
@@ -515,8 +529,30 @@ const GanttHeader = { div: {    meta: { if: $=>$.scope.project!==undefined},
   '': [
 
     { div: {
-      text: f`@project?.name`,
-      a_style: "width: "+HEDADER_WIDTH+"px; heigth: 100%; display: inline-block; font-weight: 600; font-size: 1.9rem",
+      let_in_rename: false,
+      '': [
+        { input: {   meta: { if: $ => $.in_rename },
+          let_projName: Bind(`@project.name`),
+          'ha.value': Bind(f`@projName`),
+          style: 'width: calc(100% - 55px); margin-right: 5px;',
+          h_onkeypress: ($, evt) => {if (evt.key === 'Esc') {$.in_rename = false}}
+        }},
+        { button: {   meta: { if: $ => $.in_rename },
+          text: "Rename",
+          h_onclick: async $ => {
+            await $.le.api.renameProject($.project.id, $.project.name)
+            $.in_rename = false
+            Router.navigate("home", {projId: $.project.id}, false)
+          },
+          style: "width: 45px;font-size: 10px;height: 45px;"
+        }}, 
+
+        { span: {   meta: { if: $ => !$.in_rename },
+          text: f`@project.name`, //  + '---' + @in_rename
+          h_onclick: $ => { $.in_rename = true } 
+        }}
+      ],
+      a_style: "width: "+HEDADER_WIDTH+"px; heigth: 100%; display: inline-block; font-weight: 600; font-size: 1.9rem; position: relative; z-index: 2",
     }},
     
     // { div: {   meta: {forEach: "day", of: $=>getCalendar(new Date($.scope.project?.startDate), NUM_DAYS)},
@@ -608,7 +644,7 @@ const PopOverService = { Controller: { meta: {hasViewChilds: true},
 }}
 
 
-export const HomePage = async (state)=>{ return { 
+export const GanttPage = async (state)=>{ console.log("STATE:", state); return { 
   div: {
 
     id: "app",
@@ -616,6 +652,20 @@ export const HomePage = async (state)=>{ return {
     let_projects: undefined,
     let_project: undefined,
     let_today: (()=>{ let d = new Date; return (d.getFullYear()-2000) +"-"+ (d.getMonth()+1) +"-"+ (d.getDate())})(),
+
+    
+    afterChildsInit: async $ => {
+      await pywebviewReady
+      
+      console.log(pywebview)
+      console.log(pywebview.api)
+      console.log(Object.keys(pywebview.api))
+
+      await $.le.api.getProjects()
+      await $.le.api.getProject(state?.projId)
+      console.log($.this.projects)
+      console.log($.this.project)
+    },
 
     '':[
       
@@ -632,13 +682,34 @@ export const HomePage = async (state)=>{ return {
             a_style: "width: 200px", 
             '': [
             { h4: "Projects"},
-            { h5: {   meta: { forEach: "proj", of: f`@projects || []`},
-              text: f`'- '+@proj.name`,
-              a_style: "margin-left: 25px"
+            { h5: {   meta: { forEach: "proj", of: f`@projects || []`, define: {index: "projIdx"}},
+              text: [
+                { span: { 
+                  text: f`'- '+@proj.name`,
+                  h_onclick: $ => { 
+                    console.log("navigate to: ", $.proj); 
+                    Router.navigate("home", {projId: $.proj.id}, false)
+                  }
+                }},
+                { span: {   meta: { if: f`@projIdx  > 0` },
+                  text: ' x', 
+                  style: "color: red",
+                  h_onclick: async $ => { 
+                    console.log("remove proj: ", $.proj); 
+                    await $.le.api.removeProject($.proj.id)
+                    Router.navigate("home", undefined, true)
+                  }
+                }},
+              ],
+              a_style: "margin-left: 25px; cursor: pointer;"
             }},
+            { button: {text: "Add New Project", h_onclick: async $=>{Router.navigate("home", {projId: await $.le.api.newProject()}, false)}, a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 15px; padding: 10px;color: #dddddd; cursor: pointer;"}},
             { button: {text: "Reload Data", h_onclick: $=>$.le.api.forceReloadData(), a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 15px; padding: 10px;color: #dddddd; cursor: pointer;"}},
-            { button: {text: "Execute Backup Now", h_onclick: $=>$.le.api.storeBackup(), a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 10px; padding: 10px;color: #dddddd; cursor: pointer;"}}
-
+            { button: {text: "Execute Backup Now", h_onclick: $=>$.le.api.storeBackup(), a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 10px; padding: 10px;color: #dddddd; cursor: pointer;"}},
+            { hr: {}},
+            RoutingButtonLink("Open Shared Notes", $=>["notes", {projId: $.project.id}]),
+            RoutingButtonLink("Open Shared Todolist", $=>["todolist", {projId: $.project.id}]),
+            RoutingButtonLink("Open Personal Planner", $=>["planner", undefined]),
             ]
           }}
         ], 

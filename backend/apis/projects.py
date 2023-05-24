@@ -98,6 +98,42 @@ class ProjectsController:
 
 	@staticmethod
 	@expose_to_js()
+	def removeProject(id):
+		# model._load()
+		model.projects = list(filter(lambda p: p['id']!=id, model.projects))
+		model._store()
+		return len(model.projects)
+
+	@staticmethod
+	@expose_to_js()
+	def newProject():
+		# model._load()
+		projId = 'np' + str(len(model.projects))
+		now = dt.datetime.now()
+		model.projects.append({ 
+			"id": projId,
+			"name": "New Proj - " + projId,
+			"startDate": str(now.year) + '-' + str(now.month).zfill(2) + '-01',
+			"activities": []
+		})
+		
+		model._store()
+		
+		return projId
+
+	@staticmethod
+	@expose_to_js()
+	def renameProject(id, newName):
+		proj = Find(model.projects, lambda p: p['id']==id)
+
+		proj['name']=newName
+
+		model._store()
+
+		return proj	
+	
+	@staticmethod
+	@expose_to_js()
 	def editActivity(project_id, activity, edits):
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
 
@@ -225,6 +261,7 @@ class ProjectsController:
 		subtask_ptr['idx'] = edits['newIdx']
 		subtask_ptr['name'] = edits['name']
 		subtask_ptr['description'] = edits['description']
+		subtask_ptr['len'] = edits['len']
 
 		model._store()
 		return {}
