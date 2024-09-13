@@ -11,6 +11,7 @@ from ..api_decorator import expose_to_js
 
 db_path = "./data/db.json"
 db_backup_path = "./data/db_backup_{}.json"
+current_db_version = 2
 
 class ProjectsModel:
 	def __init__(self, auto_init=True):
@@ -25,14 +26,19 @@ class ProjectsModel:
 				db = json.load(f)
 				self.task_id_gen = db['task_id_gen']
 				self.projects = db['projects']
+				self.db_version = db.get('db_version', 1)
+
+				if self.db_version != current_db_version:
+					self.migrate(self.db_version, current_db_version)
 		except:
 			self.task_id_gen = 4
+			self.db_version = current_db_version
 			self.projects =  [{ 
 				"id": "p0",
 				"name": "Proj 1",
 				"startDate": "2022-06-01",
 				"activities": [
-					{ "id": "task1", "name": "Task 1", "color": "green", "start": 0, "len": 30, "subtasks": [{"idx": 20, "name": "M", "description":""}]},
+					{ "id": "task1", "name": "Task 1", "color": "green", "start": 0, "len": 30, "subtasks": [{"idx": 20, "name": "M", "description":"", 'todos': [{"done": False, "text": '', "created_on": 0, "tags": ['vivi'], "estimated": 0, "priority": 10, "due_to": 0},]}]},
 					{ "id": "task2", "name": "Task 2", "color": "green", "start": 15, "len": 30, "subtasks": []},
 					{ "id": "task3", "name": "Task 3", "color": "green", "start": 30, "len": 45, "subtasks": []}
 				]
@@ -46,22 +52,62 @@ class ProjectsModel:
 			if not os.path.exists(db_path):
 				self._store()
 			else:
+				print("TRY PATH", db_path)
 				raise Exception("Erro During Model Init")
 
 	def _store(self):
 		print("store")
 
 		with open(db_path, "w") as f:
-			db = {'task_id_gen': self.task_id_gen, 'projects': self.projects}
+			db = {'task_id_gen': self.task_id_gen, 'projects': self.projects, 'db_version': self.db_version}
 			json.dump(db, f)
 
 	def _store_backup(self):
 		print("store backup")
+		
+		fpath = db_backup_path.format(dt.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
 
-		with open(db_backup_path.format(dt.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")), "w") as f:
-			db = {'task_id_gen': self.task_id_gen, 'projects': self.projects}
+		with open(fpath, "w") as f:
+			db = {'task_id_gen': self.task_id_gen, 'projects': self.projects, 'db_version': self.db_version}
 			json.dump(db, f)
+		
+		return fpath
+	
+	def migrate(self, migration_from, migration_to):
 
+		def migration_1_to_2():
+			for project in self.projects:
+				for activity in project.get('activities'):
+					for subtask in activity.get('subtasks'):
+						if 'todos' not in subtask:
+							subtask['todos'] = []
+
+		migrations = {
+			"1 -> 2": migration_1_to_2
+		}
+
+		curr_migr_version = migration_from
+
+		print("Migration required!", migration_from, "->", migration_to)
+
+		for next_migration_to in range(migration_from+1, migration_to+1):
+			next_migr_func = migrations.get(f'{curr_migr_version} -> {next_migration_to}', None)
+			
+			print("Migrating", f'{curr_migr_version} -> {next_migration_to}', '...')
+
+			if next_migr_func is not None:
+				self._store_backup()
+				try:
+					next_migr_func()
+					print("Migrated", f'{curr_migr_version} -> {next_migration_to}', '!')
+					self.db_version = curr_migr_version+1
+					self._store()
+					print("Saved Migration", f'{curr_migr_version} -> {next_migration_to}', '!')
+					curr_migr_version += 1
+				except:
+					raise Exception("Migration Failed! Abort")
+
+		print("End Migration ", migration_from, "->", migration_to)
 
 model = ProjectsModel(True)
 
@@ -261,6 +307,7 @@ class ProjectsController:
 		subtask_ptr['idx'] = edits['newIdx']
 		subtask_ptr['name'] = edits['name']
 		subtask_ptr['description'] = edits['description']
+		subtask_ptr['todos'] = edits['todos'] if edits['todos'] else []
 		subtask_ptr['len'] = edits['len']
 
 		model._store()

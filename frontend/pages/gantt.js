@@ -1,4 +1,4 @@
-import {pass, none, smart, Use, f, Extended, Placeholder, Bind, RenderApp, toInlineStyle, LE_LoadScript, LE_LoadCss, LE_InitWebApp, LE_BackendApiMock, Alias} from "../libs/cle/lib/caged-le.js"
+import {cle, pass, none, smart, Use, f, fArgs, Extended, Placeholder, Bind, RenderApp, toInlineStyle, LE_LoadScript, LE_LoadCss, LE_InitWebApp, LE_BackendApiMock, Alias} from "../libs/cle/lib/caged-le.js"
 import {Router} from "../libs/cle/routing/lite_routing.js"
 
 import { MainLayout } from "../layouts/main_layout.js"
@@ -159,6 +159,180 @@ const openActivityEditor = $=>{
 }
 
 
+const TodosComponent = ()=>({ div: {
+
+  props: {
+    curr_idx: -1,
+    curr_text: '',
+    curr_done: false,
+    curr_tags: '',
+    curr_tags_converted: $ => $.this.curr_tags.split(',').filter(t=>t!=='').map(v=>v.trim()),
+    curr_created_on: 0,
+    curr_estimated: 0,
+    curr_priority: undefined,
+    curr_due_to: undefined,
+  },
+
+  css: [`
+    [type="checkbox"].reset-checkbox,
+    [type="checkbox"].reset-checkbox:checked,
+    [type="checkbox"].reset-checkbox:not(checked) {
+      opacity: 1;
+      position: relative;
+      pointer-events: unset;
+    }
+    
+    [type="checkbox"].reset-checkbox+span::before,
+    [type="checkbox"].reset-checkbox+span::after,
+    [type="checkbox"].reset-checkbox:checked+span::before,
+    [type="checkbox"].reset-checkbox:checked+span::after {
+      display: none;
+    }
+    
+    [type="checkbox"].reset-checkbox+span:not(.lever) {
+      padding-left: 10px;
+    }
+  `],
+
+  '': [
+
+    { div: {
+      // id: "todolist",
+
+      '': [
+        { div: { meta: {forEach: 'todo', of: $=>$.scope.todos, define: {index: 'index'}},
+          
+          def_edit_current_todo($){
+            $.scope.curr_idx = $.meta.index
+            $.scope.curr_done = $.meta.todo.done
+            $.scope.curr_text = $.meta.todo.text
+            $.scope.curr_tags = $.meta.todo.tags.join(',')
+            $.scope.curr_created_on = $.meta.todo.created_on
+            $.scope.curr_estimated = $.meta.todo.estimated ?? 0
+            $.scope.curr_priority = $.meta.todo.priority
+            $.scope.curr_due_to = $.meta.todo.due_to
+          },
+          def_remove_current_todo($){
+            $.scope.todos = $.scope.todos.filter(todo=>todo !== $.meta.todo)
+          },
+
+          style: 'display: flex;',
+
+          '': [
+            {input: { 
+              ha: {type: "checkbox", checked: f`$.meta.todo?.done`},
+              h_onchange: f`{ $.meta.todo.done = !$.meta.todo?.done }`,
+              class: 'reset-checkbox', 'a_style': 'display: inline; margin-left: 0px; margin-right: 2px',
+            }}, 
+
+            {span: { text: $ => $.meta.todo.text, handle_onclick: $ => {
+              $.scope.edit_current_todo()
+              $.scope.remove_current_todo()
+            }}},
+            
+            cle.span({style: 'flex: 1 1 auto'}),
+            
+            {span: { meta: {if: $ => $.meta.todo.estimated }, style: 'padding-right: 10px', '': [
+              "(",{span: { text: $ => $.meta.todo.estimated ?? 0}},"d)",
+            ]}},
+
+            {span: { meta: {if: $ => $.meta.todo.tags?.length > 0}, style: 'padding-right: 10px', '': [
+              "[",{span: { text: $ => $.meta.todo.tags}},"]",
+            ]}},
+
+            {span: { '': [
+              {button: { handle_onclick: $ => {$.scope.remove_current_todo()}, text: 'x'}}
+            ]}}
+            
+          ]
+        }},
+
+        { h5: { meta: {if: $ => $.scope.todos?.length === 0}, text: 'Nothing to do', style: 'color: #ccc'}}
+      ]
+    }},
+
+    {br: {}},
+
+    { div: {
+      // id: "insert_edit_bar",
+
+      a_style: "border: 1px solid #ccc; border-radius: 5px; padding: 10px;",
+
+      def_add_todo($){
+        const todo = {
+          done: $.scope.curr_done, 
+          text: $.scope.curr_text, 
+          created_on: $.scope.curr_created_on, 
+          tags: $.scope.curr_tags?.split(',').filter(t=>t!=='').map(v=>v.trim()) || [], 
+          estimated: $.scope.curr_estimated ?? 0, 
+          priority: $.scope.curr_priority, 
+          due_to: $.scope.curr_due_to
+        }
+
+        if ($.scope.curr_idx === -1){
+          $.scope.todos = [...$.scope.todos, todo]
+        }
+        else {
+          const pre = $.scope.todos.slice(0, $.scope.curr_idx)
+          const post = $.scope.todos.slice($.scope.curr_idx, $.scope.todos.length+1)
+          $.scope.todos = [...pre, todo, ...post]
+        }
+        
+        $.scope.curr_idx = -1
+        $.scope.curr_done = false
+        $.scope.curr_text = ''
+        $.scope.curr_tags = ''
+        $.scope.curr_created_on = 0
+        $.scope.curr_estimated = 0
+        $.scope.curr_priority = undefined
+        $.scope.curr_due_to = undefined
+      },
+
+      '': [
+        
+        // { h6: { text: "Add" }},
+
+        { h6: { text: "Add New", style: 'margin: 0px' }},
+        {input: {'ha.value': Bind($ => $.scope.curr_text), style: 'height: 35px', h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}`}},
+        
+        FlexSpacedRow({},
+          FlexCol({ flex: '1'},
+            { h6: { text: "Estimate (dd)", style: 'margin: 0px' }},
+            {input: {'ha.value': Bind($ => $.scope.curr_estimated), style: 'height: 35px; ', h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}`}},
+          ),
+          FlexCol({ flex: '2'},
+            { h6: { text: "Tags (t1, t2, t3 ..)", style: 'margin: 0px' }},
+            { div: { style: 'display: inline-flex; width: 100%',  '': [
+                
+              {input: {'ha.value': Bind($ => $.scope.curr_tags), a_style: "height: 35px; ", h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}` }},
+              
+              {input: { 
+                ha: {type: "checkbox", checked: f`$.scope.curr_done`},
+                h_onchange: f`{ $.scope.curr_done = !$.scope.curr_done }`,
+                class: 'reset-checkbox', 'a_style': { display: 'inline; margin-left: 15px; margin-right: 15px'},
+              }}, 
+
+              {button: { handle_onclick: $ => {
+                $.scope.add_todo()
+              }, text: 'Add'}}
+            ]}}
+          )
+        ),
+
+      ]
+    }},
+    
+  ]
+}})
+
+const FlexSpacedRow = (style={}, ...content)=>{
+  return { div: { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '15px', ...style}, '': content}}
+}
+
+const FlexCol = (style={}, ...content)=>{
+  return { div: { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: '1', ...style}, '': content}}
+}
+
 // $$ means sub app / new dynamic render
 const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={})=>({ div: {
 
@@ -167,47 +341,68 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={
     idx: subtask.idx,
     name: subtask.name,
     description: subtask.description,
+    todos: JSON.parse(JSON.stringify(subtask.todos ?? [])), // {done: false, text: '', created_on: 0, tags: ['vivi'], estimated: 1, priority: 10, due_to: 0},
     len: subtask.len || 1,
 
     newIdx: subtask.idx,
     position: Alias($=>$.this.newIdx/DAY_SIZE_PX, ($,v)=>{$.this.newIdx=v*DAY_SIZE_PX})
   },
 
-  handle: { onclick: ($, evt) => { evt.stopPropagation(); onCancel() } },
+  def_set_todos($, todos){
+    $.this.todos = todos
+  },
+
+  clicked_here: false,
+  handle: {  
+    onmousedown: ($, evt) => {$.scope.clicked_here = true}, // fix exit on click started from editor pane
+    onclick: ($, evt) => { evt.stopPropagation(); $.scope.clicked_here && onCancel();$.scope.clicked_here = false  } 
+  },
 
   '':[
 
     { div: {
-
-      handle: { onclick: ($, evt) => { evt.stopPropagation(); } },
+      // id: 'editor_pane_content',
+      
+      // fix exit on click started from editor pane
+      handle: {onmousedown: ($, evt) => {evt.stopPropagation(); $.scope.clicked_here = false}, onclick: ($, evt) => { evt.stopPropagation(); } },
 
       '': [
 
-        { h5: { text: "SubTask" }},
-        { input: { 
-          'ha.value': Bind($ => $.scope.name)
-        }},
+        FlexSpacedRow({},
+          FlexCol({},
+            { h6: { text: "SubTask" }},
+            { input: { 
+              'ha.value': Bind($ => $.scope.name)
+            }},
+          ),
+          FlexCol({},
+            { h6: { text: "Position" }},
+            { input: { 
+              'ha.value': Bind($ => $.scope.position)
+            }},
+          ),
+          FlexCol({},
+            { h6: { text: "Length" }},
+            { input: { 
+              'ha.value': Bind($ => $.scope.len)
+            }},
+          ),
+        ),
 
-        { h5: { text: "Position" }},
-        { input: { 
-          'ha.value': Bind($ => $.scope.position)
-        }},
+        { h5: { text: "Todos" }},
+        TodosComponent(),
 
-        { h5: { text: "Length" }},
-        { input: { 
-          'ha.value': Bind($ => $.scope.len)
-        }},
-
-        { h5: { text: "Description" }},
+        { h6: { text: "Description" }},
         { textarea: { 
-          'ha.value': Bind($ => $.scope.description),  a_style: "height: 150px"
+          'ha.value': Bind($ => $.scope.description),  a_style: "height: 125px"
         }},
+
         { br: {}},
         { br: {}},
 
-        { button: { text: "Cancel", handle: { onclick: $=>onCancel() }}},
-        { button: { text: "Delete", handle: { onclick: $=>onDelete() }, meta: {if: $=>onDelete !== undefined}}},
-        { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, newIdx: $.scope.newIdx, name: $.scope.name, len: $.scope.len, description: $.scope.description}) }}}
+        { button: { text: "Cancel", handle: { onclick: $=>onCancel() }, style:'color: black; font-weight: 800;'}},
+        { button: { text: "Delete", handle: { onclick: $=>onDelete() }, meta: {if: $=>onDelete !== undefined}, style:'color: red; font-weight: 600;'}},
+        { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, newIdx: $.scope.newIdx, name: $.scope.name, len: $.scope.len, description: $.scope.description, todos: $.scope.todos}) }, style:'color: green; font-weight: 800;'}}
       ],
 
       a_style: `
@@ -437,7 +632,8 @@ const GanttRowActivityGraph = { div: {
       },
 
       handle_onmouseover: $ => {
-        $.le.popover_service.show($.scope.subtask.description)
+        const todos = $.scope.subtask.todos?.map(t=> '- ' + (t.done ? '[Done]' : '[To-Do]') + ' ' + t.text + ( t.estimated ? (' ['+t.estimated+'d] ') : '')+ ( t.tags?.length > 0 ? ('[' +t.tags?.join(', ')+']') : '') ).join('\n') || ''
+        $.le.popover_service.show($.scope.subtask.description + todos)
       },
       handle_onmouseout: $ => {
         $.le.popover_service.hide()
@@ -637,9 +833,9 @@ const PopOverService = { Controller: { meta: {hasViewChilds: true},
 
     { div: { meta: {if: f`@content !== undefined`},
 
-      a_style: "position: fixed; right: calc(50% - 20%); width: 40%; bottom: 25px; min-height: 80px; max-height: 600px; padding: 10px; z-index: 1000; background-color: white; border: 1px solid #aaaaaa;",
+      a_style: "position: fixed; right: calc(50% - 20%); width: 40%; bottom: 25px; min-height: 120px; max-height: 1000px; padding: 10px; z-index: 1000; background-color: white; border: 1px solid #aaaaaa;",
 
-      '': {i: $ => $.scope.content.split("\n").join("; ") || "(Nothing To Show)" }
+      '': {pre: { text: $ => $.scope.content || "(Nothing To Show)", style: $ => $.scope.content ? 'font-weight: 400; wrap-word; overflow-wrap: break-word; text-wrap: wrap;' : 'color: #ccc' }}
     }}
 }}
 
