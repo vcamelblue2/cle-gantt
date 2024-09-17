@@ -48,6 +48,10 @@ export const Api = { Controller: {
       await pywebview.api.exec("ProjectsController.renameProject", id, newName)
     },
 
+    getProjectTags: async ($, id)=>{
+      $.scope.project_tags = await pywebview.api.exec("ProjectsController.getProjectTags", id)
+    },
+
     editActivity: async ($, project_id, activity, edits)=>{
       await pywebview.api.exec("ProjectsController.editActivity", project_id, activity, edits)
       await $.this.getProject($.project?.id)
@@ -91,12 +95,14 @@ export const Api = { Controller: {
       if(fullRefresf){
         await $.this.getProject($.project?.id)
       }
+      await $.this.getProjectTags($.project?.id)
     },
     editSubTask: async ($, project_id, activity, subtask, edits, fullRefresf=false)=>{
       await pywebview.api.exec("ProjectsController.editSubTask", project_id, activity, subtask, edits)
       if(fullRefresf){
         await $.this.getProject($.project?.id)
       }
+      await $.this.getProjectTags($.project?.id)
     },
 
     // filesystem

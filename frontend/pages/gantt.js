@@ -53,7 +53,7 @@ const getCalendar = (today_date = new Date(), num_days=NUM_DAYS, group_by_year_m
 
 
 // $$ means sub app / new dynamic render
-const $$GanttActivityEditor = ({parent, activity, onConfirm, onCancel, onDelete}={})=>({ div: {
+const $$GanttActivityEditor = ({parent, projectStartDate, activity, onConfirm, onCancel, onDelete}={})=>({ div: {
 
   props: {
     parent: parent, 
@@ -62,7 +62,7 @@ const $$GanttActivityEditor = ({parent, activity, onConfirm, onCancel, onDelete}
     start: activity.start,
     len: activity.len,
 
-    days: getCalendar(new Date("2022-06-01"), NUM_DAYS, false)
+    days: getCalendar(new Date(projectStartDate), NUM_DAYS, false)
   },
 
   handle: { onclick: ($, evt) => { evt.stopPropagation(); onCancel() } },
@@ -92,15 +92,15 @@ const $$GanttActivityEditor = ({parent, activity, onConfirm, onCancel, onDelete}
 
         { h5: { text: "Start" }},
         { input: { 
-          'ha.value': Bind($ => $.scope.start)
+          'ha.value': Bind($ => $.scope.start), a_type: 'number'
         }},
-        { div: $=>"20"+$.scope.days[$.scope.start].date_str.replaceAll("-", "/")},
+        { div: {text: $=>"From: 20"+$.scope.days[$.scope.start].date_str.replaceAll("-", "/"), style: 'font-weight: 600'}},
 
         { h5: { text: "Len" }},
         { input: { 
-          'ha.value': Bind($ => $.scope.len)
+          'ha.value': Bind($ => $.scope.len), a_type: 'number'
         }},
-        { div: $=>"20"+$.scope.days[parseInt($.scope.start)+parseInt($.scope.len)].date_str.replaceAll("-", "/")},
+        { div: {text: $=>"To: 20"+$.scope.days[parseInt($.scope.start)+parseInt($.scope.len)].date_str.replaceAll("-", "/"), style: 'font-weight: 600'}},
 
         { br: {}},
         { br: {}},
@@ -155,7 +155,7 @@ const openActivityEditor = $=>{
     app.destroy()
     app = undefined
   }
-  app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, activity: $.scope.activity, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
+  app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, projectStartDate: $.scope.project?.startDate, activity: $.scope.activity, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
 }
 
 
@@ -171,6 +171,15 @@ const TodosComponent = ()=>({ div: {
     curr_estimated: 0,
     curr_priority: undefined,
     curr_due_to: undefined,
+
+    
+    is_insert_bar_open: $ => $.scope.todos?.length === 0 ? true : false
+  },
+
+  def: {
+    toggle_is_insert_bar_open($){
+      $.is_insert_bar_open = !$.is_insert_bar_open
+    },
   },
 
   css: [`
@@ -211,6 +220,8 @@ const TodosComponent = ()=>({ div: {
             $.scope.curr_estimated = $.meta.todo.estimated ?? 0
             $.scope.curr_priority = $.meta.todo.priority
             $.scope.curr_due_to = $.meta.todo.due_to
+
+            !$.is_insert_bar_open && ($.is_insert_bar_open = true)
           },
           def_remove_current_todo($){
             $.scope.todos = $.scope.todos.filter(todo=>todo !== $.meta.todo)
@@ -247,11 +258,11 @@ const TodosComponent = ()=>({ div: {
           ]
         }},
 
-        { h5: { meta: {if: $ => $.scope.todos?.length === 0}, text: 'Nothing to do', style: 'color: #ccc'}}
+        { h6: { meta: {if: $ => $.scope.todos?.length === 0}, text: 'Nothing to do', style: 'color: #ccc'}}
       ]
     }},
 
-    {br: {}},
+    {br: {meta: {if: $ => $.scope.todos?.length !== 0}}},
 
     { div: {
       // id: "insert_edit_bar",
@@ -292,32 +303,42 @@ const TodosComponent = ()=>({ div: {
         
         // { h6: { text: "Add" }},
 
-        { h6: { text: "Add New", style: 'margin: 0px' }},
-        {input: {'ha.value': Bind($ => $.scope.curr_text), style: 'height: 35px', h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}`}},
-        
-        FlexSpacedRow({},
-          FlexCol({ flex: '1'},
-            { h6: { text: "Estimate (dd)", style: 'margin: 0px' }},
-            {input: {'ha.value': Bind($ => $.scope.curr_estimated), style: 'height: 35px; ', h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}`}},
-          ),
-          FlexCol({ flex: '2'},
-            { h6: { text: "Tags (t1, t2, t3 ..)", style: 'margin: 0px' }},
-            { div: { style: 'display: inline-flex; width: 100%',  '': [
-                
-              {input: {'ha.value': Bind($ => $.scope.curr_tags), a_style: "height: 35px; ", h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}` }},
-              
-              {input: { 
-                ha: {type: "checkbox", checked: f`$.scope.curr_done`},
-                h_onchange: f`{ $.scope.curr_done = !$.scope.curr_done }`,
-                class: 'reset-checkbox', 'a_style': { display: 'inline; margin-left: 15px; margin-right: 15px'},
-              }}, 
-
-              {button: { handle_onclick: $ => {
-                $.scope.add_todo()
-              }, text: 'Add'}}
-            ]}}
-          )
+        FlexSpacedRow({}, 
+          { h6: { text: "Add", style: 'margin: 0px; cursor: pointer;',  onclick: $ => $.toggle_is_insert_bar_open() }},
+          { button: { text: $ => $.is_insert_bar_open ? 'hide' : 'show', onclick: $ => $.toggle_is_insert_bar_open(), style:'height: 30px;'}}
         ),
+        { div: { meta: {if: $ => $.is_insert_bar_open},
+
+          '': [
+            {input: {'ha.value': Bind($ => $.scope.curr_text), style: 'height: 35px', h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}`}},
+            
+            FlexSpacedRow({},
+              FlexCol({ flex: '2'},
+                { h6: { text: "Tags", style: 'margin: 0px' }},
+                { div: { style: 'display: inline-flex; width: 100%',  '': [
+                  {input: {'ha.value': Bind($ => $.scope.curr_tags), a_style: "height: 35px; ", h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}` }},
+                ]}}
+              ),
+              FlexCol({ flex: '1'},
+                { h6: { text: "Estimate dd", style: 'margin: 0px' }},
+                
+                { div: { style: 'display: inline-flex; width: 100%',  '': [
+                  {input: {'ha.value': Bind($ => $.scope.curr_estimated), style: 'height: 35px; ', h_onkeypress: fArgs('e')`{ if(e.key === 'Enter') { e.preventDefault(); $.scope.add_todo() }}`}},
+                  
+                  {input: { 
+                    ha: {type: "checkbox", checked: f`$.scope.curr_done`},
+                    h_onchange: f`{ $.scope.curr_done = !$.scope.curr_done }`,
+                    class: 'reset-checkbox', 'a_style': { display: 'inline; margin-left: 15px; margin-right: 15px'},
+                  }}, 
+
+                  {button: { handle_onclick: $ => {
+                    $.scope.add_todo()
+                  }, text: 'Add'}}
+                ]}}
+              ),
+            ),
+          ]
+        }}
 
       ]
     }},
@@ -334,7 +355,7 @@ const FlexCol = (style={}, ...content)=>{
 }
 
 // $$ means sub app / new dynamic render
-const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={})=>({ div: {
+const $$GanttSubTaskEditor = ({parent, projectStartDate, activityStartIndex, subtask, onConfirm, onCancel, onDelete}={})=>({ div: {
 
   props: {
     parent: parent, 
@@ -365,34 +386,38 @@ const $$GanttSubTaskEditor = ({parent, subtask, onConfirm, onCancel, onDelete}={
       
       // fix exit on click started from editor pane
       handle: {onmousedown: ($, evt) => {evt.stopPropagation(); $.scope.clicked_here = false}, onclick: ($, evt) => { evt.stopPropagation(); } },
+      days: getCalendar(new Date(projectStartDate), NUM_DAYS, false),
 
       '': [
 
         FlexSpacedRow({},
           FlexCol({},
-            { h6: { text: "SubTask" }},
+            { h6: { text: "Type" }},
             { input: { 
               'ha.value': Bind($ => $.scope.name)
             }},
+            { div: '[T,D,M]',}
           ),
           FlexCol({},
-            { h6: { text: "Position" }},
+            { h6: { text: "Start" }},
             { input: { 
-              'ha.value': Bind($ => $.scope.position)
+              'ha.value': Bind($ => $.scope.position), a_type: 'number'
             }},
+            { div: {text: $=>"From: 20"+($.scope.days[parseInt($.scope.position)+parseInt(activityStartIndex)]?.date_str.replaceAll("-", "/") ?? ' - err'), style: 'font-weight: 600'}},
           ),
           FlexCol({},
-            { h6: { text: "Length" }},
+            { h6: { text: "Duration" }},
             { input: { 
-              'ha.value': Bind($ => $.scope.len)
+              'ha.value': Bind($ => $.scope.len), a_type: 'number'
             }},
+            { div: {text: $=>"To: 20"+($.scope.days[parseInt($.scope.position)+parseInt(activityStartIndex)+parseInt($.scope.len)]?.date_str.replaceAll("-", "/") ?? ' - err'), style: 'font-weight: 600'}},
           ),
         ),
 
-        { h5: { text: "Todos" }},
+        { h5: { text: "Tasks" }},
         TodosComponent(),
 
-        { h6: { text: "Description" }},
+        { h6: { text: "Notes" }},
         { textarea: { 
           'ha.value': Bind($ => $.scope.description),  a_style: "height: 125px"
         }},
@@ -452,7 +477,7 @@ const openSubTaskEditor = $=>{
     app.destroy()
     app = undefined
   }
-  app = RenderApp(document.body, $$GanttSubTaskEditor({parent: $.this, subtask: $.scope.subtask, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
+  app = RenderApp(document.body, $$GanttSubTaskEditor({parent: $.this, projectStartDate: $.scope.project?.startDate, activityStartIndex: $.scope.activity.start, subtask: $.scope.subtask, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
 }
 
 
@@ -602,6 +627,8 @@ const GanttRowActivityGraph = { div: {
     }
   },
 
+  //show hide row here if tags filter
+
   '': [
 
     { span: { 
@@ -632,11 +659,41 @@ const GanttRowActivityGraph = { div: {
       },
 
       handle_onmouseover: $ => {
-        const todos = $.scope.subtask.todos?.map(t=> '- ' + (t.done ? '[Done]' : '[To-Do]') + ' ' + t.text + ( t.estimated ? (' ['+t.estimated+'d] ') : '')+ ( t.tags?.length > 0 ? ('[' +t.tags?.join(', ')+']') : '') ).join('\n') || ''
-        $.le.popover_service.show($.scope.subtask.description + todos)
+        const todos = $.scope.get_visible_todos()?.map(t=> '- ' + (t.done ? '[Done]' : '[To-Do]') + ' ' + t.text + ( t.estimated ? (' ['+t.estimated+'d] ') : '')+ ( t.tags?.length > 0 ? ('[' +t.tags?.join(', ')+']') : '') ).join('\n') || ''
+        $.le.popover_service.show(todos + (todos + $.scope.subtask.description ? "\n" : '') + $.scope.subtask.description) // todo: better use array, filter '', join '\n'
       },
       handle_onmouseout: $ => {
         $.le.popover_service.hide()
+      },
+
+      let_is_visible: $ => {
+        const selected = $.le.tags_filter.selected_tags
+        if (selected.length === 0){
+          return true
+        }
+
+        const tags = $.meta.subtask.todos?.flatMap(todo=>todo.tags) ?? []
+        
+        for (let tag of tags){
+          if (selected.includes(tag)){
+            return true
+          }
+        } 
+        
+        return false
+      },
+      
+      def_get_visible_todos: $ => {
+        const selected = $.le.tags_filter.selected_tags;
+        const todos = $.meta.subtask.todos ?? []
+        
+        if (selected.length === 0){
+          return todos
+        } 
+        else {
+          const filtered_todos = todos.filter(todo => todo.tags.filter(tag => selected.includes(tag)).length > 0 )
+          return filtered_todos
+        }
       },
 
       text: f`@subtask.name`,
@@ -649,7 +706,8 @@ const GanttRowActivityGraph = { div: {
         top: "0px", 
         padding: "4px", 
         backgroundColor: getColorTask($.scope.subtask.name),
-        textAlign: "center"
+        textAlign: "center",
+        opacity: $.is_visible ? null : '0'
       })
     }}
   ],
@@ -828,7 +886,6 @@ const PopOverService = { Controller: { meta: {hasViewChilds: true},
     },
   },
   
-
   view: 
 
     { div: { meta: {if: f`@content !== undefined`},
@@ -839,6 +896,42 @@ const PopOverService = { Controller: { meta: {hasViewChilds: true},
     }}
 }}
 
+const TagsFilterSelector = () => {
+
+  return (
+    cle.div({},
+      
+      FlexSpacedRow({},
+        { h6: "Filter By Tags"},
+        { button: { onclick: $ => $.le.tags_filter.selected_tags = [], text: 'x'}}
+      ),
+
+      cle.div({
+        id: "tags_filter",
+        
+        let:{
+          selected_tags: [],
+          filtering: $ => $.scope.selected_tags?.length !== 0
+        },
+
+        // on_this_selected_tagsChanged: $=>{console.log("selected tags changed", $.selected_tags)},
+
+        on_scope_project_tagsChanged: $ => {
+          if ($.scope.selected_tags?.length > 0){
+            $.scope.selected_tags = $.scope.selected_tags?.filter(tag => $.scope.project_tags.includes(tag))
+          }
+        }
+      },
+        cle.select({ a_value: $=>$.scope.selected_tags, h_onchange: ($, e)=>{ $.scope.selected_tags = Array.from(e.target.selectedOptions).map(s=>s.value)}, class: "browser-default", a_multiple: true, style: 'min-height: 100px;'},
+          cle.option({ meta: {forEach: 'tag', of: $ => $.scope.project_tags}, 
+            ha_value: $=>$.tag, 
+            ha_selected: $=>$.scope.selected_tags.includes($.tag), 
+          }, $ => $.tag)
+        )
+      )
+    )
+  )
+}
 
 export const GanttPage = async (state)=>{ console.log("STATE:", state); return { 
   div: {
@@ -847,6 +940,7 @@ export const GanttPage = async (state)=>{ console.log("STATE:", state); return {
 
     let_projects: undefined,
     let_project: undefined,
+    let_project_tags: [],
     let_today: (()=>{ let d = new Date; return (d.getFullYear()-2000) +"-"+ (d.getMonth()+1) +"-"+ (d.getDate())})(),
 
     
@@ -860,7 +954,8 @@ export const GanttPage = async (state)=>{ console.log("STATE:", state); return {
       await $.le.api.getProjects()
       await $.le.api.getProject(state?.projId)
       console.log($.this.projects)
-      console.log($.this.project)
+      console.log($.this.project)      
+      await $.le.api.getProjectTags($.project.id);
     },
 
     '':[
@@ -902,6 +997,8 @@ export const GanttPage = async (state)=>{ console.log("STATE:", state); return {
             { button: {text: "Add New Project", h_onclick: async $=>{Router.navigate("home", {projId: await $.le.api.newProject()}, false)}, a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 15px; padding: 10px;color: #dddddd; cursor: pointer;"}},
             { button: {text: "Reload Data", h_onclick: $=>$.le.api.forceReloadData(), a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 15px; padding: 10px;color: #dddddd; cursor: pointer;"}},
             { button: {text: "Execute Backup Now", h_onclick: $=>$.le.api.storeBackup(), a_style: "width: 100%; background: none; border: 0.25px dashed #dddddd; margin-top: 10px; padding: 10px;color: #dddddd; cursor: pointer;"}},
+            { hr: {}},
+            TagsFilterSelector(),
             { hr: {}},
             RoutingButtonLink("Open Shared Notes", $=>["notes", {projId: $.project.id}]),
             RoutingButtonLink("Open Shared Todolist", $=>["todolist", {projId: $.project.id}]),

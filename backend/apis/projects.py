@@ -177,6 +177,23 @@ class ProjectsController:
 		model._store()
 
 		return proj	
+
+	@staticmethod
+	@expose_to_js()
+	def getProjectTags(id):
+		proj = Find(model.projects, lambda p: p['id']==id)
+
+		tags = []
+	
+		for activity in proj.get('activities', []):
+			for subtask in activity.get('subtasks', []):
+				for todos in subtask.get('todos', []):
+					for tag in todos.get('tags', []):
+						if tag not in tags:
+							tags.append(tag)
+
+		return tags
+	
 	
 	@staticmethod
 	@expose_to_js()
@@ -243,11 +260,11 @@ class ProjectsController:
 	@expose_to_js()
 	def moveActivityLeft(project_id, activity):
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
-		if activity_ptr['start'] == 0:
+		if str(activity_ptr['start']) == '0':
 			raise Exception("cannot move left")
 
-		activity_ptr['start'] -= 1
-		
+		activity_ptr['start'] = int(activity_ptr['start'])-1
+
 		model._store()
 		return {'new_start': activity_ptr['start']}
 
@@ -256,7 +273,7 @@ class ProjectsController:
 	def moveActivityRight(project_id, activity):
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
 	
-		activity_ptr['start'] += 1
+		activity_ptr['start'] = int(activity_ptr['start'])+1
 
 		model._store()
 		return {'new_start': activity_ptr['start']}
@@ -266,7 +283,7 @@ class ProjectsController:
 	@expose_to_js()
 	def incrementActivityLen(project_id, activity):
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
-		activity_ptr['len'] += 1
+		activity_ptr['len'] = int(activity_ptr['len'])+1
 
 		model._store()
 		return {'new_len': activity_ptr['len']}
@@ -276,10 +293,10 @@ class ProjectsController:
 	@expose_to_js()
 	def decrementActivityLen(project_id, activity):
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
-		if activity_ptr['len'] == 0:
+		if str(activity_ptr['len']) == '0':
 			raise Exception("cannot move left")
 		
-		activity_ptr['len'] -= 1
+		activity_ptr['len'] = int(activity_ptr['len'])-1
 
 		model._store()
 		return {'new_len': activity_ptr['len']}
