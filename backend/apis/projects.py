@@ -192,7 +192,7 @@ class ProjectsController:
 						if tag not in tags:
 							tags.append(tag)
 
-		return tags
+		return list(sorted(tags))
 	
 	
 	@staticmethod
