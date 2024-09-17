@@ -182,6 +182,10 @@ const TodosComponent = ()=>({ div: {
     },
   },
 
+  on_this_curr_textChanged: $ => {
+    $.scope.pending_todos_edits = $.scope.curr_text ? true : false
+  },
+
   css: [`
     [type="checkbox"].reset-checkbox,
     [type="checkbox"].reset-checkbox:checked,
@@ -366,7 +370,9 @@ const $$GanttSubTaskEditor = ({parent, projectStartDate, activityStartIndex, sub
     len: subtask.len || 1,
 
     newIdx: subtask.idx,
-    position: Alias($=>$.this.newIdx/DAY_SIZE_PX, ($,v)=>{$.this.newIdx=v*DAY_SIZE_PX})
+    position: Alias($=>$.this.newIdx/DAY_SIZE_PX, ($,v)=>{$.this.newIdx=v*DAY_SIZE_PX}),
+
+    pending_todos_edits: false,
   },
 
   def_set_todos($, todos){
@@ -425,9 +431,12 @@ const $$GanttSubTaskEditor = ({parent, projectStartDate, activityStartIndex, sub
         { br: {}},
         { br: {}},
 
-        { button: { text: "Cancel", handle: { onclick: $=>onCancel() }, style:'color: black; font-weight: 800;'}},
-        { button: { text: "Delete", handle: { onclick: $=>onDelete() }, meta: {if: $=>onDelete !== undefined}, style:'color: red; font-weight: 600;'}},
-        { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, newIdx: $.scope.newIdx, name: $.scope.name, len: $.scope.len, description: $.scope.description, todos: $.scope.todos}) }, style:'color: green; font-weight: 800;'}}
+        { div: { meta: {if: $ => $.scope.pending_todos_edits}, style:'color: red; font-weight: 600; margin-bottom: 10px', text: "Please, insert or discard to do to continue"}},
+        { div: { style: $ =>({opacity: $.scope.pending_todos_edits ? 0.1 : null, pointerEvents:  $.scope.pending_todos_edits ? 'none' : null}), '': [
+          { button: { text: "Cancel", handle: { onclick: $=>onCancel() }, style:'color: black; font-weight: 800;'}},
+          { button: { text: "Delete", handle: { onclick: $=>onDelete() }, meta: {if: $=>onDelete !== undefined}, style:'color: red; font-weight: 600;'}},
+          { button: { text: "Confirm", handle: { onclick: $=>onConfirm({idx: $.scope.idx, newIdx: $.scope.newIdx, name: $.scope.name, len: $.scope.len, description: $.scope.description, todos: $.scope.todos}) }, style:'color: green; font-weight: 800;'}}
+        ]}}
       ],
 
       a_style: `
