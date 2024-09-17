@@ -3,7 +3,7 @@ import webview
 
 from backend.api import ExposedApi_V1
 
-storage_path="./data/.pywebview/"
+# storage_path="./data/.pywebview/"
 
 args = {
     "DEV": {
@@ -21,5 +21,5 @@ if __name__ == '__main__':
     api = ExposedApi_V1()
     # webview.settings['OPEN_DEVTOOLS_IN_DEBUG'] = False
     window = webview.create_window('Gantt App', 'frontend/index.html', js_api=api, min_size=(1000, 800))
-    webview.start(http_server=True, private_mode=False, storage_path=storage_path, **args)
+    webview.start(http_server=True, private_mode=False, **args)
 
