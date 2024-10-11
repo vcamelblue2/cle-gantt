@@ -11,7 +11,8 @@ from ..api_decorator import expose_to_js
 
 db_path = "./data/db.json"
 db_backup_path = "./data/db_backup_{}.json"
-current_db_version = 2
+current_db_version = 3
+sould_reload_delta = 0 * 60 * 1000 # 5 min
 
 class ProjectsModel:
 	def __init__(self, auto_init=True):
@@ -38,9 +39,9 @@ class ProjectsModel:
 				"name": "Proj 1",
 				"startDate": "2022-06-01",
 				"activities": [
-					{ "id": "task1", "name": "Task 1", "color": "green", "start": 0, "len": 30, "subtasks": [{"idx": 20, "name": "M", "description":"", 'todos': [{"done": False, "text": '', "created_on": 0, "tags": ['vivi'], "estimated": 0, "priority": 10, "due_to": 0},]}]},
-					{ "id": "task2", "name": "Task 2", "color": "green", "start": 15, "len": 30, "subtasks": []},
-					{ "id": "task3", "name": "Task 3", "color": "green", "start": 30, "len": 45, "subtasks": []}
+					{ "id": "task1", "name": "Task 1", "color": "green", "start": 0, "len": 30, "subtasks_default_color": "orange", "subtasks": [{"idx": 20, "name": "M", "description":"", "custom_color": '', 'todos': [{"done": False, "text": '', "created_on": 0, "tags": ['vivi'], "estimated": 0, "priority": 10, "due_to": 0},]}]},
+					{ "id": "task2", "name": "Task 2", "color": "green", "start": 15, "len": 30, "subtasks_default_color": "orange", "subtasks": []},
+					{ "id": "task3", "name": "Task 3", "color": "green", "start": 30, "len": 45, "subtasks_default_color": "orange", "subtasks": []}
 				]
 			}]
 
@@ -54,6 +55,9 @@ class ProjectsModel:
 			else:
 				print("TRY PATH", db_path)
 				raise Exception("Erro During Model Init")
+
+		self.last_load = dt.datetime.now()
+	
 
 	def _store(self):
 		print("store")
@@ -81,9 +85,19 @@ class ProjectsModel:
 					for subtask in activity.get('subtasks'):
 						if 'todos' not in subtask:
 							subtask['todos'] = []
-
+		
+		def migration_2_to_3():
+			for project in self.projects:
+				for activity in project.get('activities'):
+					if 'subtasks_default_color' not in activity:
+						activity['subtasks_default_color'] = 'orange'
+					for subtask in activity.get('subtasks'):
+						if 'custom_color' not in subtask:
+							subtask['custom_color'] = ''
+		
 		migrations = {
-			"1 -> 2": migration_1_to_2
+			"1 -> 2": migration_1_to_2,
+			"2 -> 3": migration_2_to_3,
 		}
 
 		curr_migr_version = migration_from
@@ -130,6 +144,23 @@ class ProjectsController:
 		model._load()
 		return {}
 	
+	
+	@staticmethod
+	@expose_to_js()
+	def getLastLoad():
+		return int(model.last_load.timestamp()*1000)
+	
+	@staticmethod
+	@expose_to_js()
+	def shouldReloadDelta():
+		return sould_reload_delta
+
+	@staticmethod
+	@expose_to_js()
+	def shouldReload():
+		return abs( int(dt.datetime.now().timestamp()*1000) - int(model.last_load.timestamp()*1000)) >= sould_reload_delta
+	
+
 	@staticmethod
 	@expose_to_js()
 	def getProjects():
@@ -202,8 +233,10 @@ class ProjectsController:
 
 		activity_ptr['name']=edits['name']
 		activity_ptr['color']=edits['color']
+		activity_ptr['subtasks_default_color']=edits['subtasks_default_color']
 		activity_ptr['start']=edits['start']
 		activity_ptr['len']=edits['len']
+		activity_ptr['subtasks']=edits['subtasks']
 
 		model._store()
 		return activity_ptr
@@ -215,7 +248,7 @@ class ProjectsController:
 		proj_ptr = Find(model.projects, lambda p: p['id']==project_id)
 		
 		model.task_id_gen+=1
-		proj_ptr['activities'].append({**activity, 'id': "task"+str(model.task_id_gen), 'subtasks':[]})
+		proj_ptr['activities'].append({**activity, 'id': "task"+str(model.task_id_gen)})
 
 		model._store()
 		return {}
@@ -323,6 +356,7 @@ class ProjectsController:
 
 		subtask_ptr['idx'] = edits['newIdx']
 		subtask_ptr['name'] = edits['name']
+		subtask_ptr['custom_color'] = edits['custom_color']
 		subtask_ptr['description'] = edits['description']
 		subtask_ptr['todos'] = edits['todos'] if edits['todos'] else []
 		subtask_ptr['len'] = edits['len']

@@ -28,6 +28,16 @@ export const Api = { Controller: {
       await pywebview.api.exec("ProjectsController.forceReloadData")
       await $.this.getProjects()
       await $.this.getProject($.project?.id)
+      await $.this.getProjectTags($.project?.id)
+    },
+    getLastLoad: async ($)=>{
+      return await pywebview.api.exec("ProjectsController.getLastLoad")
+    },
+    shouldReloadDelta: async ($)=>{
+      return await pywebview.api.exec("ProjectsController.shouldReloadDelta")
+    },
+    shouldReload: async ($)=>{
+      return await pywebview.api.exec("ProjectsController.shouldReload")
     },
     
     getProjects: async ($)=>{
@@ -56,8 +66,8 @@ export const Api = { Controller: {
       await pywebview.api.exec("ProjectsController.editActivity", project_id, activity, edits)
       await $.this.getProject($.project?.id)
     },
-    addActivity: async ($, project_id, name, color, start, len)=>{
-      await pywebview.api.exec("ProjectsController.addActivity", project_id, {name: name, color: color, start: start, len: len})
+    addActivity: async ($, project_id, name, color, start, len, subtasks_default_color='orange', subtasks=[])=>{
+      await pywebview.api.exec("ProjectsController.addActivity", project_id, {name: name, color: color, start: start, len: len, subtasks_default_color: subtasks_default_color, subtasks: subtasks}, )
       await $.this.getProject($.project?.id)
     },
     deleteActivity: async ($, project_id, activity_id)=>{
