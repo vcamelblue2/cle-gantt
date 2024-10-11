@@ -13,7 +13,7 @@ export const Navbar = (navbarContents={ div: { text: "Nav", 'ha.style.fontSize':
     text: navbarContents
 }})
 
-export const Sidebar = (sidebarContents)=>({ div: {
+export const Sidebar = (sidebarContents, Logo="App Logo")=>({ div: {
 
     'a.style': {
         backgroundColor: "#2d3436",
@@ -24,7 +24,7 @@ export const Sidebar = (sidebarContents)=>({ div: {
     },
     
     "=>": [
-        { div: { 'a.style': {fontWeight: "100", fontSize: "1.9rem", paddingBottom: "0px", paddingLeft: "10px", backgroundColor: "#f1c40f", color: "white", display: "flex", justifyContent: "center", position: "sticky", top: "10px"}, text: "App Logo"}},
+        { div: { 'a.style': {fontWeight: "100", fontSize: "1.9rem", paddingBottom: "0px", paddingLeft: "10px", backgroundColor: "#f1c40f", color: "white", display: "flex", justifyContent: "center", }, text: Logo}},
         
         ...sidebarContents,
     ]
@@ -41,8 +41,8 @@ export const MainContent = (Components)=>({ div: {
 }})
 
 
-export const MainLayout = ({NavbarContents, SidebarComponents, MainContentComponents}={})=>Extended(NavSidebarLayout({
+export const MainLayout = ({NavbarContents, SidebarComponents, SideBarLogo, MainContentComponents}={})=>Extended(NavSidebarLayout({
     navbar: Navbar(NavbarContents),
-    sidebar: Sidebar(SidebarComponents),
+    sidebar: Sidebar(SidebarComponents, SideBarLogo),
     main_content: MainContent(MainContentComponents)
 }))
