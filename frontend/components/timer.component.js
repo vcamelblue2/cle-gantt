@@ -37,6 +37,10 @@ export const Timer = { Model: {
       $.running && $.start();
     },
 
+    onDestroy: $ => {
+      $.running && $.stop();
+    },
+
     on_runningChanged: ($, running, oldRunning) => {
       if (running !== oldRunning){
         running ? $.start() : $.stop()
