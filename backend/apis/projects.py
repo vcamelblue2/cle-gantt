@@ -12,7 +12,7 @@ from ..api_decorator import expose_to_js
 db_path = "./data/db.json"
 db_backup_path = "./data/db_backup_{}.json"
 current_db_version = 3
-sould_reload_delta = 0 * 60 * 1000 # 5 min
+sould_reload_delta = 5 * 60 * 1000 # 5 min
 
 class ProjectsModel:
 	def __init__(self, auto_init=True):
@@ -123,6 +123,9 @@ class ProjectsModel:
 
 		print("End Migration ", migration_from, "->", migration_to)
 
+	def should_reload(self):
+		return abs( int(dt.datetime.now().timestamp()*1000) - int(self.last_load.timestamp()*1000)) >= sould_reload_delta
+
 model = ProjectsModel(True)
 
 
@@ -158,25 +161,31 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def shouldReload():
-		return abs( int(dt.datetime.now().timestamp()*1000) - int(model.last_load.timestamp()*1000)) >= sould_reload_delta
+		return model.should_reload()
 	
 
 	@staticmethod
 	@expose_to_js()
 	def getProjects():
-		# model._load()
+		# if model.shouldReload():
+		# 	model._load()
+
 		return list(map(lambda p: {"id": p['id'], "name": p['name']}, model.projects))
 
 	@staticmethod
 	@expose_to_js()
 	def getProject(id='p0'):
-		# model._load()
+		# if model.shouldReload():
+		# 	model._load()
+
 		return list(filter(lambda p: p['id']==id, model.projects))[0]
 
 	@staticmethod
 	@expose_to_js()
 	def removeProject(id):
-		# model._load()
+		# if model.shouldReload():
+		# 	model._load()
+
 		model.projects = list(filter(lambda p: p['id']!=id, model.projects))
 		model._store()
 		return len(model.projects)
@@ -184,7 +193,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def newProject():
-		# model._load()
+		# if model.shouldReload():
+		# 	model._load()
+
 		projId = 'np' + str(len(model.projects))
 		now = dt.datetime.now()
 		model.projects.append({ 
@@ -201,6 +212,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def renameProject(id, newName):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		proj = Find(model.projects, lambda p: p['id']==id)
 
 		proj['name']=newName
@@ -212,6 +226,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def getProjectTags(id):
+		# if model.shouldReload():
+		# 	model._load()
+
 		proj = Find(model.projects, lambda p: p['id']==id)
 
 		tags = []
@@ -229,6 +246,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def editActivity(project_id, activity, edits):
+		# if model.shouldReload():
+		# 	model._load()
+
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
 
 		activity_ptr['name']=edits['name']
@@ -245,6 +265,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def addActivity(project_id, activity):
+		# if model.shouldReload():
+		# 	model._load()
+
 		proj_ptr = Find(model.projects, lambda p: p['id']==project_id)
 		
 		model.task_id_gen+=1
@@ -257,6 +280,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def deleteActivity(project_id, activity_id):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		proj_ptr = Find(model.projects, lambda p: p['id']==project_id)
 		proj_ptr['activities'] = Filter(proj_ptr['activities'], lambda a: a['id'] != activity_id)
 		
@@ -267,6 +293,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def moveActivityUp(project_id, activity_idx):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		proj_ptr = Find(model.projects, lambda p: p['id']==project_id)
 		if activity_idx == 0:
 			raise Exception("cannot move up")
@@ -279,6 +308,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def moveActivityDown(project_id, activity_idx):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		proj_ptr = Find(model.projects, lambda p: p['id']==project_id)
 		if activity_idx == len(proj_ptr['activities'])-1:
 			raise Exception("cannot move down")
@@ -292,6 +324,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def moveActivityLeft(project_id, activity):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
 		if str(activity_ptr['start']) == '0':
 			raise Exception("cannot move left")
@@ -304,6 +339,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def moveActivityRight(project_id, activity):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
 	
 		activity_ptr['start'] = int(activity_ptr['start'])+1
@@ -315,6 +353,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def incrementActivityLen(project_id, activity):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
 		activity_ptr['len'] = int(activity_ptr['len'])+1
 
@@ -325,6 +366,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def decrementActivityLen(project_id, activity):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
 		if str(activity_ptr['len']) == '0':
 			raise Exception("cannot move left")
@@ -338,6 +382,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def editSubTasks(project_id, activity, subTasks):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		activity_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])
 		activity_ptr['subtasks'] = subTasks
 
@@ -348,6 +395,9 @@ class ProjectsController:
 	@staticmethod
 	@expose_to_js()
 	def editSubTask(project_id, activity, subTask, edits):
+		# if model.shouldReload():
+		# 	model._load()
+			
 		subtasks_ptr = Find(Find(model.projects, lambda p: p['id']==project_id)['activities'], lambda a: a['id']==activity['id'])['subtasks']
 		subtask_ptr = Find(subtasks_ptr, lambda s: s['idx']==subTask['idx'])
 
