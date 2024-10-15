@@ -5,13 +5,15 @@ from backend.api import ExposedApi_V1
 
 # storage_path="./data/.pywebview/"
 
+env = 'DEV' if len(sys.argv) > 1 else "PROD"
+
 args = {
     "DEV": {
-        "http_port": 4012,
+        "http_port": 4013,
         "debug": True
     },
     "PROD": {
-        "http_port": 4213
+        "http_port": 4214
     }
 
 }.get(sys.argv[1] if len(sys.argv) > 1 else "PROD")
