@@ -634,14 +634,27 @@ const openSubTaskEditor = $=>{
 }
 
 
-const TodoMarker = { span: { meta: {forEach: 'todo', of: $ => $.meta.subtask?.todos ?? []},
+const todosGroupedByDueTo = (todos) => {
+  const todos_map = {}
+  for (let todo of todos){
+    if (todos_map[todo.due_to ?? 0] === undefined){
+      todos_map[todo.due_to ?? 0] = {...todo}
+    }
+    // ho già un valore: sovrascrivo solo se ho un todo NON completato, altrimetni lascio quello che c'era -> ciò implca arrivare ad avere todo non completati come priority n.1 del grouping
+    else if (!todo.done) {
+      todos_map[todo.due_to ?? 0] = {...todo}
+    }
+  }
+  return Object.values(todos_map)
+} 
+const TodoMarker = { span: { meta: {forEach: 'todo', of: $ => todosGroupedByDueTo(($.scope.visible_todos ?? []).filter(t => (t.due_to ?? 0) > 0 )) }, // filter only available
 
   style: $ => ({
     width: (1+((1/3) * DAY_SIZE_PX))+"px",
     height: (1+((1/3) * DAY_SIZE_PX))+"px",
     left: ((DAY_SIZE_PX * (($.meta.todo.due_to ?? 0)))-0.5-((2/3) * DAY_SIZE_PX))+"px",
     top: "-2px",
-    background: 'black',
+    background: $.meta.todo.done ? 'green' : 'black',
     position: 'absolute', 
     borderRadius: '100%',
     visibility: $.meta.todo.due_to > 0 ? 'visible':'hidden'
@@ -840,7 +853,7 @@ const GanttRowActivityGraph = { div: {
               : 
               ''
           }
-          todos = $.scope.get_visible_todos()?.map(t=> '- ' + (t.done ? '[Done]' : '[To-Do]') + ' ' + t.text + ( t.estimated ? (' ['+t.estimated+'d] ') : '') + get_todo_due_date_as_txt(t) + ( t.tags?.length > 0 ? ('[' +t.tags?.join(', ')+']') : '') ).join('\n') || ''
+          todos = $.scope.visible_todos?.map(t=> '- ' + (t.done ? '[Done]' : '[To-Do]') + ' ' + t.text + ( t.estimated ? (' ['+t.estimated+'d] ') : '') + get_todo_due_date_as_txt(t) + ( t.tags?.length > 0 ? ('[' +t.tags?.join(', ')+']') : '') ).join('\n') || ''
         }
          
         const todos_part = todos 
@@ -921,18 +934,30 @@ const GanttRowActivityGraph = { div: {
         
       },
       
-      def_get_visible_todos: $ => {
+      let_visible_todos: $ => {
         const selected_by_tags = $.le.tags_filter.selected;
         const selected_by_status = $.le.tags_status_filter.selected;
         const todos = $.meta.subtask.todos ?? []
 
-        const sorted = (todos)=>todos.toSorted((a,b)=>(a.due_to ?? 0) - (b.due_to ?? 0))
+        const sorted = (todos)=>todos.toSorted((a,b)=>(a.due_to ?? Number.MAX_SAFE_INTEGER) - (b.due_to ?? Number.MAX_SAFE_INTEGER)) // without a due to at the end
         
         if (selected_by_tags.length === 0 && selected_by_status.length === 0){
           return sorted(todos)
         } 
         else {
-          const filtered_todos = todos.filter(todo => todo.tags.filter(tag => (selected_by_tags.length === 0 || (selected_by_tags.length > 0 && selected_by_tags.includes(tag))).length > 0) && (selected_by_status.length === 0 || (selected_by_status.length > 0 && selected_by_status.includes(todo.done ? 'Done' : 'To-Do'))) )
+          const filtered_todos = todos.filter(todo => {
+
+            let with_status_condition = selected_by_status.length === 0 || 
+                                        (selected_by_status.length > 0 && selected_by_status.includes(todo.done ? 'Done' : 'To-Do'));
+            
+            let with_tags_condition = todo.tags.filter(tag => 
+                                        selected_by_tags.length === 0 || 
+                                        (selected_by_tags.length > 0 && selected_by_tags.includes(tag))
+                                      ).length > 0;
+
+            return with_tags_condition && with_status_condition
+
+          })
           return sorted(filtered_todos)
         }
       },
@@ -1185,7 +1210,7 @@ const PopOverService = { Controller: { meta: {hasViewChilds: true},
     },
     hide: $ => { 
       clearTimeout($.this.timeout)
-      $.this.timeout = setTimeout(()=>{ $.this.content = undefined}, 300) 
+      $.this.timeout = setTimeout(()=>{ $.this.content = undefined}, 600) 
     },
   },
   
@@ -1193,7 +1218,7 @@ const PopOverService = { Controller: { meta: {hasViewChilds: true},
 
     { div: { meta: {if: f`@content !== undefined && !$.le.show_in_popup_filter.popup_disabled`},
 
-      a_style: "position: fixed; right: calc(50% - 20%); width: 40%; bottom: 25px; min-height: 120px; max-height: 1000px; padding: 10px; z-index: 1000; background-color: white; border: 1px solid #aaaaaa;",
+      a_style: "position: fixed; right: calc(calc(100vw - 230px) * 0.1); min-width: 200px; width: calc(calc(100vw - 230px) * 0.8); bottom: 25px; min-height: 120px; max-height: 70vh; padding: 10px; z-index: 1000; background-color: white; border: 1px solid #aaaaaa; overflow-y: auto",
 
       '': {pre: { text: $ => $.scope.content || "(Nothing To Show)", style: $ => $.scope.content ? 'font-weight: 400; wrap-word; overflow-wrap: break-word; text-wrap: wrap;' : 'color: #ccc' }}
     }}
