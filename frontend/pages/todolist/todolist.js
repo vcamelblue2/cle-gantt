@@ -9,7 +9,7 @@ import { RoutingButtonLink } from "../../components/routing-button.component.js"
 import { Api } from "../../api/backend_api.js"
 
 // setup csz lib 
-import {default as csz} from 'https://unpkg.com/csz'
+import {default as csz} from '../../libs/csz/index.js'
 window.css = (v)=>csz([v]) // fix to not use template literal
 
 window.Cle = Cle
