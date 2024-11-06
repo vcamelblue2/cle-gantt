@@ -79,6 +79,7 @@ return {
     },
 
     dragAndDrop:{
+      // events on draggable items
       onDragStart($, target$, evt){
         // console.log(target$.el.innerHTML)
 
@@ -88,28 +89,34 @@ return {
         evt.dataTransfer.setData('resetStyle', ()=>{
           target$.el.style.opacity = null
           target$.el.style.backgroundColor = null
-          target$.el.style.display = null
+          // target$.el.style.visibility = null
+          // target$.el.style.height = null
         })
-        $.tmp_latest_render = '<div style="width: 100%; height: 40px; background-color: #dddddd"></div>' //target$.el.innerHTML
+        $.tmp_latest_render = '<div style="width: 100%; height: 40px; background-color: #dddddd"></div>'
+        // $.tmp_latest_render = target$.el.innerHTML
+        // setTimeout(() => {
+        //   target$.el.style.height = '50px'
+        //   target$.el.style.visibility = 'hidden'
+        // }, 100); 
+      },
+      onDragEnd($, target$, evt){
         setTimeout(() => {
-          target$.el.style.display = 'none'
-        }, 400); 
+          // evt.dataTransfer.getData("resetStyle")()
+          target$.el.style.opacity = null
+          target$.el.style.backgroundColor = null
+          // target$.el.style.visibility = null
+          // target$.el.style.height = null
+        }, 100);
       },
 
+
+      // events on droppable area
       onDragOver($, target$, evt){
         evt.preventDefault();
-        // if ('placeholder_for_drop_on_first' in target$.scope){
-
-        // } else {
-          // console.log(target$, evt)
-          // target$.i != evt.dataTransfer.getData("idx") &&
           if (target$.subrender === undefined){
             $.removesubrender.emit()
             target$.u.clearLazyRender()
-            // target$.subrender = target$.u.lazyRender(()=>({div: { style: "color: red", text: "aaaa"}}))
-            // console.log(evt, evt.dataTransfer.getData("idx"))
-            target$.subrender = target$.u.lazyRender(()=>(html($.tmp_latest_render)))
-
+            // target$.subrender = target$.u.lazyRender(()=>(Cle.html($.tmp_latest_render)))
           }
         // }
       },
@@ -134,8 +141,14 @@ return {
 
             console.log(draggedIdx, targetIdx, draggedTodo, targetTodo)
 
+
             let reordered = $.todolist.filter(x=>x !== draggedTodo)
-            reordered.splice(reordered.indexOf(targetTodo)+1, 0, draggedTodo)
+            if (draggedIdx > targetIdx){
+              reordered.splice(reordered.indexOf(targetTodo), 0, draggedTodo)
+            } else {
+              reordered.splice(reordered.indexOf(targetTodo)+1, 0, draggedTodo)
+            }
+
             $.removesubrender.emit()
             $.tmp_latest_render = undefined
             $.todolist = [...reordered]
@@ -144,6 +157,7 @@ return {
             // for (let idx = 0; idx < reordered.length; idx++){
               
             // }
+
           }
           else {
             evt.dataTransfer.getData("resetStyle")()
@@ -221,8 +235,23 @@ return {
       <hr/>
       <!-- ________________________________________________ -->
       <ul style="position: relative">
-        <li style="height: 45px; position: absolute; top: -45px; width: 100%;" [let-placeholder_for_drop_on_first]="true" [let-subrender]="undefined"  (ondragover)="@dragAndDrop.onDragOver($, evt)" (ondrop)="@dragAndDrop.onDrop($, evt)"  (on-removesubrender)="{ $.subrender = undefined; $.u.clearLazyRender() }"> </li>
-        <li meta-foreach="todoEl of @todolist" meta-define-index="i" meta-define-first="first"  [let-subrender]="undefined" draggable="true" (ondragstart)="@dragAndDrop.onDragStart($, evt)" (ondragover)="@dragAndDrop.onDragOver($, evt)" (ondrop)="@dragAndDrop.onDrop($, evt)" (on-removesubrender)="{ $.subrender = undefined; $.u.clearLazyRender() }">
+        <li 
+          style="height: 45px; position: absolute; top: -45px; width: 100%;" 
+          [let-placeholder_for_drop_on_first]="true" 
+          [let-subrender]="undefined"  
+          (ondragover)="@dragAndDrop.onDragOver($, evt)" 
+          (ondrop)="@dragAndDrop.onDrop($, evt)"  
+          (on-removesubrender)="{ $.subrender = undefined; $.u.clearLazyRender() }"
+        > </li>
+        <li class="item" meta-foreach="todoEl of @todolist" meta-define-index="i" meta-define-first="first"  
+            [let-subrender]="undefined" 
+            draggable="true" 
+            (ondragstart)="@dragAndDrop.onDragStart($, evt)" 
+            (ondragend)="@dragAndDrop.onDragEnd($, evt)" 
+            (ondragover)="@dragAndDrop.onDragOver($, evt)" 
+            (ondrop)="@dragAndDrop.onDrop($, evt)" 
+            (on-removesubrender)="{ $.subrender = undefined; $.u.clearLazyRender() }"
+        >
           <input type="checkbox" [ha-checked]="@todoEl.done" (onchange)="@toggleTodo(@i)" >
           <!-- <span [class]="@todoEl.done ? 'done-status' : ''">{{@i+1}}.</span> -->
           <span [class]="'content ' + (@todoEl.done ? 'done' : '')"  (onclick)="@toggleTodo(@i)">

@@ -20,7 +20,11 @@
     list-style-type:none;
     cursor: pointer;
   }
-  
+  li.item{
+    margin-top: 0px;
+    padding-top: 12px;
+  }
+
   .function-btn-container{
     /* float: right; */
     /* margin-right: 10px; */
