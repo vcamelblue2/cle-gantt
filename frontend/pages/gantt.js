@@ -422,7 +422,25 @@ const TodosComponent = ()=>({ div: {
             $.scope.todos = $.scope.todos.filter(todo=>todo !== $.meta.todo)
           },
 
-          style: 'display: flex;',
+          let_is_visible: $ => {
+            const selected_by_tags = $.scope.cp_tags_filter.selected;
+            const selected_by_status = $.scope.cp_tags_status_filter.selected;
+            const selected_by_due_to = $.scope.cp_due_to_filter.selected;
+            
+            if (selected_by_tags.length === 0 && selected_by_status.length === 0 && selected_by_due_to === 'All'){
+              return true
+            } 
+
+              for (let tag of $.scope.todo.tags){
+                if ((selected_by_tags.length === 0 || (selected_by_tags.length > 0 && selected_by_tags.includes(tag))) && 
+                    (selected_by_status.length === 0 || (selected_by_status.length > 0 && selected_by_status.includes($.scope.todo.done ? 'Done' : 'To-Do'))) &&
+                    (selected_by_due_to === 'All' || (selected_by_due_to === 'Planned' && $.scope.todo.due_to > 0 ) || (selected_by_due_to === 'Not Planned' && ($.scope.todo.due_to <= 0 || $.scope.todo.due_to === undefined) )) ){
+                  return true
+                }
+            }
+            
+            return false
+          },
 
           '': [
             {input: { 
@@ -456,7 +474,12 @@ const TodosComponent = ()=>({ div: {
               {button: { handle_onclick: $ => {$.scope.remove_current_todo()}, text: 'x'}}
             ]}}
             
-          ]
+          ],
+
+          style: $ => ({
+            display: 'flex',
+            opacity: $.scope.is_visible ? 1 : 0.3
+          }),
         }},
 
         { h6: { meta: {if: $ => $.scope.todos?.length === 0}, text: 'Nothing to do', style: 'color: #ccc'}}
@@ -590,10 +613,10 @@ const SubtaskCopyService = {
 }
 
 // $$ means sub app / new dynamic render
-const $$GanttSubTaskEditor = ({parent, days, projectStartDate, activityStartIndex, subtask, onConfirm, onCancel, onDelete}={})=>({ div: {
+const $$GanttSubTaskEditor = ({$parent, days, projectStartDate, activityStartIndex, subtask, onConfirm, onCancel, onDelete}={})=>({ div: {
 
   props: {
-    parent: parent, 
+    parent: $parent.parent, 
     projectStartDate: projectStartDate,
     activityStartIndex: activityStartIndex,
     idx: subtask.idx,
@@ -609,6 +632,11 @@ const $$GanttSubTaskEditor = ({parent, days, projectStartDate, activityStartInde
     pending_todos_edits: false,
 
     days: days,
+    
+    cp_tags_filter: $parent.le.tags_filter,
+    cp_tags_status_filter: $parent.le.tags_status_filter,
+    cp_due_to_filter: $parent.le.due_to_filter
+    
   },
 
   def_set_todos($, todos){
@@ -741,7 +769,7 @@ const openSubTaskEditor = $=>{
     app.destroy()
     app = undefined
   }
-  app = RenderApp(document.body, $$GanttSubTaskEditor({parent: $.this, days: $.scope.proj_days, projectStartDate: $.scope.project?.startDate, activityStartIndex: $.scope.activity.start, subtask: $.scope.subtask, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
+  app = RenderApp(document.body, $$GanttSubTaskEditor({$parent: $, days: $.scope.proj_days, projectStartDate: $.scope.project?.startDate, activityStartIndex: $.scope.activity.start, subtask: $.scope.subtask, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
 }
 
 
