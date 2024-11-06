@@ -167,6 +167,8 @@ const $$GanttActivityEditor = ({parent, days, projectStartDate, activity, onConf
         border: 3px solid black;
         border-radius: 25px;
         padding: 25px;
+        overflow-y: auto;
+        resize: both;
       `,
 
     }}
@@ -203,6 +205,94 @@ const openActivityEditor = $=>{
     app = undefined
   }
   app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, days: $.scope.proj_days, projectStartDate: $.scope.project?.startDate, activity: $.scope.activity, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
+}
+
+
+const DRAG_DROP_LIST_ITEM_DIRECTIVE__ELEMENTS_CONTAINER_DEF = (/** @type ($, drop_target_$, evt, draggedIdx, droppedIdx) => any */swap, index_name='index', /** @type undefined | {set: ($, el) => any, remove: ($, el) => any} */custom_style_drop=undefined ) => {
+  return { 
+    def: {
+      dragAndDrop:{
+        // events on draggable items
+        onDragStart($, drag_target_$, evt){
+          // console.log("DRAG START")
+
+          evt.dataTransfer.setData('idx', drag_target_$[index_name])
+
+          drag_target_$.el.style.opacity = 0.5
+          drag_target_$.el.style.backgroundColor = "white"
+          
+          evt.dataTransfer.setData('resetStyle', ()=>{
+            drag_target_$.el.style.opacity = null
+            drag_target_$.el.style.backgroundColor = null
+          })
+        },
+        onDragEnd($, drag_target_$, evt){
+          // console.log("DRAG END")
+          setTimeout(() => {
+            // evt.dataTransfer.getData("resetStyle")()
+            drag_target_$.el.style.opacity = null
+            drag_target_$.el.style.backgroundColor = null
+          }, 100);
+        },
+
+        // events on droppable item
+        onDragOver($, drop_target_$, evt){
+          // console.log("DRAG OVER")
+          // required to accept drop
+          evt.preventDefault(); 
+        },
+        onDragEnter($, drop_target_$, evt){
+          // console.log("DRAG ENTER")
+          evt.preventDefault();
+
+          // highlight border of drop element
+          if(custom_style_drop) 
+            custom_style_drop?.set(drop_target_$, drop_target_$.el)
+          else
+            drop_target_$.el.style.border = "1px solid black"
+        },
+        onDragLeave($, drop_target_$, evt){
+          // console.log("DRAG LEAVE")
+          evt.preventDefault();
+
+          // remove highlight border of drop element
+          if(custom_style_drop) 
+            custom_style_drop?.remove(drop_target_$, drop_target_$.el)
+          else
+            drop_target_$.el.style.border = null
+        },
+        onDrop($, drop_target_$, evt){
+          // console.log("DRAG DROP")
+          evt.preventDefault();
+
+          // console.log("DROP!!", evt.dataTransfer.getData("idx"), evt)
+
+          let draggedIdx = parseInt(evt.dataTransfer.getData("idx"))
+          let droppedIdx = drop_target_$[index_name]
+          
+          if (draggedIdx !== droppedIdx){
+            swap($, drop_target_$, evt, draggedIdx, droppedIdx)
+          }
+          else {
+            evt?.dataTransfer?.getData?.("resetStyle")?.()
+          }
+        }
+      }
+    }
+  }
+}
+const DRAG_DROP_LIST_ITEM_DIRECTIVE__DRAGGABLE_ELEMENT_DEF = ()=>{
+  return {
+    a_draggable: "true",
+
+    handle_ondragstart: ($, evt) => $.scope.dragAndDrop.onDragStart($, evt),
+    handle_ondragend: ($, evt) => $.scope.dragAndDrop.onDragEnd($, evt),
+
+    handle_ondragover: ($, evt) => $.scope.dragAndDrop.onDragOver($, evt),
+    handle_ondragenter: ($, evt) => $.scope.dragAndDrop.onDragEnter($, evt),
+    handle_ondragleave: ($, evt) => $.scope.dragAndDrop.onDragLeave($, evt),
+    handle_ondrop: ($, evt) => $.scope.dragAndDrop.onDrop($, evt),
+  }
 }
 
 const TodoCopyService = {
@@ -296,83 +386,25 @@ const TodosComponent = ()=>({ div: {
     { div: {
       // id: "todolist",
 
-      def: {
-            
-        dragAndDrop:{
-          // events on draggable items
-          onDragStart($, drag_target_$, evt){
-            evt.dataTransfer.setData('idx', drag_target_$.index)
+      ...DRAG_DROP_LIST_ITEM_DIRECTIVE__ELEMENTS_CONTAINER_DEF(
+        // on swap:
+        ($, drop_target_$, evt, draggedIdx, droppedIdx) => {
+          evt.preventDefault();
 
-            drag_target_$.el.style.opacity = 0.5
-            drag_target_$.el.style.backgroundColor = "white"
-            
-            evt.dataTransfer.setData('resetStyle', ()=>{
-              drag_target_$.el.style.opacity = null
-              drag_target_$.el.style.backgroundColor = null
-            })
-          },
-          onDragEnd($, drag_target_$, evt){
-            setTimeout(() => {
-              // evt.dataTransfer.getData("resetStyle")()
-              drag_target_$.el.style.opacity = null
-              drag_target_$.el.style.backgroundColor = null
-            }, 100);
-          },
+          let draggedTodo = $.scope.todos[draggedIdx]
+          let droppedTodo = $.scope.todos[droppedIdx]
 
-
-          // events on droppable item
-          onDragOver($, drop_target_$, evt){
-            // required to accept drop
-            evt.preventDefault(); 
-          },
-          onDragEnter($, drop_target_$, evt){
-            evt.preventDefault();
-            // highlight border of drop element
-            drop_target_$.el.style.border = "1px solid black"
-          },
-          onDragLeave($, drop_target_$, evt){
-            evt.preventDefault();
-            // remove highlight border of drop element
-            drop_target_$.el.style.border = null
-          },
-          onDrop($, drop_target_$, evt){
-            evt.preventDefault();
-            
-            // console.log("DROP!!", evt.dataTransfer.getData("idx"), evt)
-
-            let draggedIdx = parseInt(evt.dataTransfer.getData("idx"))
-            let draggedTodo = $.scope.todos[draggedIdx]
-            
-            let droppedIdx = drop_target_$.index
-            let droppedTodo = $.scope.todos[droppedIdx]
-            
-            // console.log(draggedIdx, droppedIdx, draggedTodo, droppedTodo)
-            
-            if (draggedIdx !== droppedIdx){
-              let reordered = $.scope.todos.filter(x=>x !== draggedTodo) // remove current drag
-              reordered.splice(reordered.indexOf(droppedTodo) + (draggedIdx > droppedIdx ? 0 : 1), 0, draggedTodo) // insert at dropped place (before or after)
-              $.scope.todos = [...reordered]
-            }
-            else {
-              evt.dataTransfer.getData("resetStyle")()
-            }
-          },
-        },
-      },
+          let reordered = $.scope.todos.filter(x=>x !== draggedTodo) // remove current drag
+          reordered.splice(reordered.indexOf(droppedTodo) + (draggedIdx > droppedIdx ? 0 : 1), 0, draggedTodo) // swap drop/drag items
+          
+          $.scope.todos = [...reordered]
+        }
+      ),
 
       '': [
         { div: { meta: {forEach: 'todo', of: $=>$.scope.todos, define: {index: 'index'}},
-        
-          a: {draggable: "true"},
-          handle: {
-            ondragstart: ($, evt) => $.scope.dragAndDrop.onDragStart($, evt),
-            ondragend: ($, evt) => $.scope.dragAndDrop.onDragEnd($, evt),
 
-            ondragover: ($, evt) => $.scope.dragAndDrop.onDragOver($, evt),
-            ondragenter: ($, evt) => $.scope.dragAndDrop.onDragEnter($, evt),
-            ondragleave: ($, evt) => $.scope.dragAndDrop.onDragLeave($, evt),
-            ondrop: ($, evt) => $.scope.dragAndDrop.onDrop($, evt),
-          },
+          ...DRAG_DROP_LIST_ITEM_DIRECTIVE__DRAGGABLE_ELEMENT_DEF(),
           
           def_edit_current_todo($){
             $.scope.curr_idx = $.meta.index
@@ -672,6 +704,7 @@ const $$GanttSubTaskEditor = ({parent, days, projectStartDate, activityStartInde
         border-radius: 25px;
         padding: 25px;
         overflow-y: auto;
+        resize: both;
       `,
 
     }}
@@ -771,7 +804,7 @@ const GanttRowActivityHeader = { div: {
 
           handle_onclick: $=>$.this.openActivityEditor(),
 
-          text: f`@activity.name`, 
+          text: f`@activity.name || '(empty name)'`, 
           a_style: "overflow-y: auto; max-width: "+(2*HEDADER_WIDTH/3)+"px; overflow-wrap: anywhere; display: inline-table; background: white; font-weight: 600; min-height: "+ROW_HEIGHT+"px"
         }},
 
@@ -779,23 +812,23 @@ const GanttRowActivityHeader = { div: {
 
           '': [
 
-            { button: {
+            // { button: {
 
-              text: "-",
+            //   text: "-",
 
-              handle_onclick: async $=> await $.le.api.decrementActivityLen($.scope.project.id, $.scope.activity),
+            //   handle_onclick: async $=> await $.le.api.decrementActivityLen($.scope.project.id, $.scope.activity),
 
-              a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
-            }},
+            //   a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
+            // }},
 
-            { button: {
+            // { button: {
 
-              text: "<",
+            //   text: "<",
 
-              handle_onclick: async $=> await $.le.api.moveActivityLeft($.scope.project.id, $.scope.activity),
+            //   handle_onclick: async $=> await $.le.api.moveActivityLeft($.scope.project.id, $.scope.activity),
 
-              a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
-            }},
+            //   a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
+            // }},
 
             { button: {
 
@@ -815,23 +848,23 @@ const GanttRowActivityHeader = { div: {
               a_style: "width: 25px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
             }},
 
-            { button: {
+            // { button: {
 
-              text: ">",
+            //   text: ">",
 
-              handle_onclick: async $=> await $.le.api.moveActivityRight($.scope.project.id, $.scope.activity),
+            //   handle_onclick: async $=> await $.le.api.moveActivityRight($.scope.project.id, $.scope.activity),
 
-              a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
-            }},
+            //   a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
+            // }},
 
-            { button: {
+            // { button: {
 
-              text: "+",
+            //   text: "+",
 
-              handle_onclick: async $=> await $.le.api.incrementActivityLen($.scope.project.id, $.scope.activity),
+            //   handle_onclick: async $=> await $.le.api.incrementActivityLen($.scope.project.id, $.scope.activity),
 
-              a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
-            }},
+            //   a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
+            // }},
           
           ]
         }}
@@ -1096,7 +1129,8 @@ const GanttRowActivityGraph = { div: {
 
 }}
 const GanttRow = { div: {   meta: {forEach: "activity", of: f`@activities || []`, define: {index: "activity_idx", first: "isFirst", last: "isLast"}},
-
+  ...DRAG_DROP_LIST_ITEM_DIRECTIVE__DRAGGABLE_ELEMENT_DEF(),
+  
   let_is_visible: $ => {
 
     const is_visible_by_single_activity_filter = ()=>{
@@ -1155,6 +1189,17 @@ const GanttRow = { div: {   meta: {forEach: "activity", of: f`@activities || []`
 }}
 const GanttRows  = { div: {
 
+  ...DRAG_DROP_LIST_ITEM_DIRECTIVE__ELEMENTS_CONTAINER_DEF(
+    // on swap:
+    ($, drop_target_$, evt, draggedIdx, droppedIdx) => {
+      $.le.api.moveActivityTo($.scope.project.id, draggedIdx, droppedIdx)
+    }, 
+    'activity_idx', 
+    { 
+     // set: ($, el) => {$.el.style.border = '2px solid black'}, remove: ($, el) => {$.el.style.border = '1px solid black'}
+    }
+  ),
+  
   '': [
     cle.div({
       style: {

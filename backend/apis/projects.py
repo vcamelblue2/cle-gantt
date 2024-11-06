@@ -289,6 +289,24 @@ class ProjectsController:
 		model._store()
 		return {}
 	
+	@staticmethod
+	@expose_to_js()
+	def moveActivityTo(project_id, activity_idx, to_acitvity_idx):
+		# if model.shouldReload():
+		# 	model._load()
+		if activity_idx == to_acitvity_idx:
+			raise Exception("cannot move itself")
+		
+		proj_ptr = Find(model.projects, lambda p: p['id']==project_id)
+		
+		dragged_activity = proj_ptr['activities'][activity_idx]
+		dropped_activity = proj_ptr['activities'][to_acitvity_idx]
+
+		proj_ptr['activities'].remove(dragged_activity)
+		proj_ptr['activities'].insert(proj_ptr['activities'].index(dropped_activity) + (0 if activity_idx > to_acitvity_idx else 1), dragged_activity)
+
+		model._store()
+		return {'new_idx': to_acitvity_idx}
 
 	@staticmethod
 	@expose_to_js()

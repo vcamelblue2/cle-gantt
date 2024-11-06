@@ -74,7 +74,10 @@ export const Api = { Controller: {
       await pywebview.api.exec("ProjectsController.deleteActivity", project_id, activity_id)
       await $.this.getProject($.project?.id)
     },
-
+    moveActivityTo: async ($, project_id, activity_idx, to_acitvity_idx)=>{
+      await pywebview.api.exec("ProjectsController.moveActivityTo", project_id, activity_idx, to_acitvity_idx)
+      await $.this.getProject($.project?.id)
+    },
     moveActivityUp: async ($, project_id, activity_idx)=>{
       await pywebview.api.exec("ProjectsController.moveActivityUp", project_id, activity_idx)
       await $.this.getProject($.project?.id)
