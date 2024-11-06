@@ -296,8 +296,83 @@ const TodosComponent = ()=>({ div: {
     { div: {
       // id: "todolist",
 
+      def: {
+            
+        dragAndDrop:{
+          // events on draggable items
+          onDragStart($, drag_target_$, evt){
+            evt.dataTransfer.setData('idx', drag_target_$.index)
+
+            drag_target_$.el.style.opacity = 0.5
+            drag_target_$.el.style.backgroundColor = "white"
+            
+            evt.dataTransfer.setData('resetStyle', ()=>{
+              drag_target_$.el.style.opacity = null
+              drag_target_$.el.style.backgroundColor = null
+            })
+          },
+          onDragEnd($, drag_target_$, evt){
+            setTimeout(() => {
+              // evt.dataTransfer.getData("resetStyle")()
+              drag_target_$.el.style.opacity = null
+              drag_target_$.el.style.backgroundColor = null
+            }, 100);
+          },
+
+
+          // events on droppable item
+          onDragOver($, drop_target_$, evt){
+            // required to accept drop
+            evt.preventDefault(); 
+          },
+          onDragEnter($, drop_target_$, evt){
+            evt.preventDefault();
+            // highlight border of drop element
+            drop_target_$.el.style.border = "1px solid black"
+          },
+          onDragLeave($, drop_target_$, evt){
+            evt.preventDefault();
+            // remove highlight border of drop element
+            drop_target_$.el.style.border = null
+          },
+          onDrop($, drop_target_$, evt){
+            evt.preventDefault();
+            
+            console.log("DROP!!", evt.dataTransfer.getData("idx"), evt)
+
+            let draggedIdx = parseInt(evt.dataTransfer.getData("idx"))
+            let draggedTodo = $.scope.todos[draggedIdx]
+            
+            let droppedIdx = drop_target_$.index
+            let droppedTodo = $.scope.todos[droppedIdx]
+            
+            // console.log(draggedIdx, droppedIdx, draggedTodo, droppedTodo)
+            
+            if (draggedIdx !== droppedIdx){
+              let reordered = $.scope.todos.filter(x=>x !== draggedTodo) // remove current drag
+              reordered.splice(reordered.indexOf(droppedTodo) + (draggedIdx > droppedIdx ? 0 : 1), 0, draggedTodo) // insert at dropped place (before or after)
+              $.scope.todos = [...reordered]
+            }
+            else {
+              evt.dataTransfer.getData("resetStyle")()
+            }
+          },
+        },
+      },
+
       '': [
         { div: { meta: {forEach: 'todo', of: $=>$.scope.todos, define: {index: 'index'}},
+        
+          a: {draggable: "true"},
+          handle: {
+            ondragstart: ($, evt) => $.scope.dragAndDrop.onDragStart($, evt),
+            ondragend: ($, evt) => $.scope.dragAndDrop.onDragEnd($, evt),
+
+            ondragover: ($, evt) => $.scope.dragAndDrop.onDragOver($, evt),
+            ondragenter: ($, evt) => $.scope.dragAndDrop.onDragEnter($, evt),
+            ondragleave: ($, evt) => $.scope.dragAndDrop.onDragLeave($, evt),
+            ondrop: ($, evt) => $.scope.dragAndDrop.onDrop($, evt),
+          },
           
           def_edit_current_todo($){
             $.scope.curr_idx = $.meta.index
