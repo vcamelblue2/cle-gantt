@@ -66,8 +66,8 @@ export const Api = { Controller: {
       await pywebview.api.exec("ProjectsController.editActivity", project_id, activity, edits)
       await $.this.getProject($.project?.id)
     },
-    addActivity: async ($, project_id, name, color, start, len, subtasks_default_color='orange', subtasks=[])=>{
-      await pywebview.api.exec("ProjectsController.addActivity", project_id, {name: name, color: color, start: start, len: len, subtasks_default_color: subtasks_default_color, subtasks: subtasks}, )
+    addActivity: async ($, project_id, name, color, start, len, subtasks_default_color='orange', subtasks=[], insert_at=undefined)=>{
+      await pywebview.api.exec("ProjectsController.addActivity", project_id, {name: name, color: color, start: start, len: len, subtasks_default_color: subtasks_default_color, subtasks: subtasks}, insert_at)
       await $.this.getProject($.project?.id)
     },
     deleteActivity: async ($, project_id, activity_id)=>{

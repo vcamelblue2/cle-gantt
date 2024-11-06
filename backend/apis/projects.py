@@ -264,14 +264,17 @@ class ProjectsController:
 
 	@staticmethod
 	@expose_to_js()
-	def addActivity(project_id, activity):
+	def addActivity(project_id, activity, insert_at=-1):
 		# if model.shouldReload():
 		# 	model._load()
 
 		proj_ptr = Find(model.projects, lambda p: p['id']==project_id)
 		
 		model.task_id_gen+=1
-		proj_ptr['activities'].append({**activity, 'id': "task"+str(model.task_id_gen)})
+		if insert_at >= 0:
+			proj_ptr['activities'].insert(insert_at, {**activity, 'id': "task"+str(model.task_id_gen)})
+		else:
+			proj_ptr['activities'].append({**activity, 'id': "task"+str(model.task_id_gen)})
 
 		model._store()
 		return {}

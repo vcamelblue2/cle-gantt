@@ -78,7 +78,7 @@ const ActivityCopyService = {
   }
 }
 // $$ means sub app / new dynamic render
-const $$GanttActivityEditor = ({parent, days, projectStartDate, activity, onConfirm, onCancel, onDelete}={})=>({ div: {
+const $$GanttActivityEditor = ({is_new, parent, days, projectStartDate, activity, onConfirm, onCancel, onDelete}={})=>({ div: {
 
   props: {
     parent: parent, 
@@ -147,7 +147,7 @@ const $$GanttActivityEditor = ({parent, days, projectStartDate, activity, onConf
           { div: { '': [
             { button: { text: "Cancel", handle: { onclick: $=>onCancel() }, style:'color: black; font-weight: 800;'}},
             { button: { text: "Delete", handle: { onclick: $=>onDelete() }, meta: {if: $=>onDelete !== undefined}, style:'color: red; font-weight: 600;'}},
-            { button: { text: "Confirm", handle: { onclick: $=>onConfirm({name: $.scope.name, color: $.scope.color, start: $.scope.start, len: $.scope.len, subtasks_default_color: $.scope.subtasks_default_color, subtasks: $.scope.subtasks ?? []}) }, style:'color: '+green+'; font-weight: 800;'}},
+            { button: { text: "Confirm", handle: { onclick: $=>onConfirm({name: $.scope.name, color: $.scope.color, start: $.scope.start, len: $.scope.len, subtasks_default_color: $.scope.subtasks_default_color, subtasks: $.scope.subtasks ?? [] }) }, style:'color: '+green+'; font-weight: 800;'}},
           ]}},
           { div: { '': [
             { button: { text: "Cut", handle: { onclick: $=>{ActivityCopyService.copy({ name: $.scope.name, color: $.scope.color, start: $.scope.start, len: $.scope.len, subtasks_default_color: $.scope.subtasks_default_color, subtasks: $.scope.subtasks ?? []}); onDelete()} }, style:'color: red; font-weight: 800;margin-right: 15px'}},
@@ -204,7 +204,7 @@ const openActivityEditor = $=>{
     app.destroy()
     app = undefined
   }
-  app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, days: $.scope.proj_days, projectStartDate: $.scope.project?.startDate, activity: $.scope.activity, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
+  app = RenderApp(document.body, $$GanttActivityEditor({is_new: false, parent: $.this, days: $.scope.proj_days, projectStartDate: $.scope.project?.startDate, activity: $.scope.activity, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
 }
 
 
@@ -865,7 +865,28 @@ const GanttRowActivityHeader = { div: {
 
             //   a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
             // }},
-          
+              
+            { button: {
+
+              text: "+",
+              
+              handle_onclick: $=>{
+                let app;
+
+                let onConfirm = (edits)=>{
+                  $.le.api.addActivity($.scope.project.id, edits.name, edits.color, edits.start, edits.len, edits.subtasks_default_color, edits.subtasks, $.scope.activity_idx+1)
+                  app.destroy()
+                  app = undefined
+                }
+                let onCancel = ()=>{
+                  app.destroy()
+                  app = undefined
+                }
+                app = RenderApp(document.body, $$GanttActivityEditor({is_new: true, parent: $.this, days: $.scope.proj_days, activity: {name: $.scope.activity.name + " / new ", color: $.scope.activity.color, start: ($.scope.activity.start ?? 0) + ($.scope.activity.len ?? 1), len: 15, subtasks_default_color: $.scope.activity.subtasks_default_color, subtasks: []}, onConfirm: onConfirm, onCancel: onCancel}))
+              },
+              
+              a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
+            }}
           ]
         }}
 
@@ -1254,7 +1275,7 @@ const GanttRows  = { div: {
             let app;
 
             let onConfirm = (edits)=>{
-              $.le.api.addActivity($.scope.project.id, edits.name, edits.color, edits.start, edits.len, edits.subtasks_default_color, edits.subtasks)
+              $.le.api.addActivity($.scope.project.id, edits.name, edits.color, edits.start, edits.len, edits.subtasks_default_color, edits.subtasks, undefined)
               app.destroy()
               app = undefined
             }
@@ -1262,7 +1283,7 @@ const GanttRows  = { div: {
               app.destroy()
               app = undefined
             }
-            app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, days: $.scope.proj_days, activity: {name: "New..", color: green, start: 0, len: 5, subtasks_default_color: 'orange', subtasks: []}, onConfirm: onConfirm, onCancel: onCancel}))
+            app = RenderApp(document.body, $$GanttActivityEditor({is_new: true, parent: $.this, days: $.scope.proj_days, activity: {name: "New..", color: green, start: 0, len: 5, subtasks_default_color: 'orange', subtasks: []}, onConfirm: onConfirm, onCancel: onCancel}))
           },
           handle_onclick: $=>$.this.openActivityCreator(),
 
