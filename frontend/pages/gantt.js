@@ -56,6 +56,8 @@ const getCalendar = (today_date = new Date(), num_days=NUM_DAYS, group_by_year_m
   }
 }
 
+const sort_todos = (todos)=>todos.toSorted((a,b)=>(a.done ? Number.MAX_SAFE_INTEGER : (a.due_to ?? Number.MAX_SAFE_INTEGER)) - (b.done ? Number.MAX_SAFE_INTEGER : (b.due_to ?? Number.MAX_SAFE_INTEGER))) // without a due to at the end
+
 
 const ActivityCopyService = {
   current: undefined,
@@ -76,7 +78,7 @@ const ActivityCopyService = {
   }
 }
 // $$ means sub app / new dynamic render
-const $$GanttActivityEditor = ({parent, projectStartDate, activity, onConfirm, onCancel, onDelete}={})=>({ div: {
+const $$GanttActivityEditor = ({parent, days, projectStartDate, activity, onConfirm, onCancel, onDelete}={})=>({ div: {
 
   props: {
     parent: parent, 
@@ -87,7 +89,7 @@ const $$GanttActivityEditor = ({parent, projectStartDate, activity, onConfirm, o
     len: activity.len,
     subtasks: activity.subtasks,
 
-    days: getCalendar(new Date(projectStartDate), NUM_DAYS, false)
+    days: days
   },
 
   handle: { onclick: ($, evt) => { evt.stopPropagation(); onCancel() } },
@@ -200,7 +202,7 @@ const openActivityEditor = $=>{
     app.destroy()
     app = undefined
   }
-  app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, projectStartDate: $.scope.project?.startDate, activity: $.scope.activity, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
+  app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, days: $.scope.proj_days, projectStartDate: $.scope.project?.startDate, activity: $.scope.activity, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
 }
 
 const TodoCopyService = {
@@ -481,7 +483,7 @@ const SubtaskCopyService = {
 }
 
 // $$ means sub app / new dynamic render
-const $$GanttSubTaskEditor = ({parent, projectStartDate, activityStartIndex, subtask, onConfirm, onCancel, onDelete}={})=>({ div: {
+const $$GanttSubTaskEditor = ({parent, days, projectStartDate, activityStartIndex, subtask, onConfirm, onCancel, onDelete}={})=>({ div: {
 
   props: {
     parent: parent, 
@@ -498,6 +500,8 @@ const $$GanttSubTaskEditor = ({parent, projectStartDate, activityStartIndex, sub
     position: Alias($=>$.this.newIdx/DAY_SIZE_PX, ($,v)=>{$.this.newIdx=v*DAY_SIZE_PX}),
 
     pending_todos_edits: false,
+
+    days: days,
   },
 
   def_set_todos($, todos){
@@ -517,7 +521,6 @@ const $$GanttSubTaskEditor = ({parent, projectStartDate, activityStartIndex, sub
       
       // fix exit on click started from editor pane
       handle: {onmousedown: ($, evt) => {evt.stopPropagation(); $.scope.clicked_here = false}, onclick: ($, evt) => { evt.stopPropagation(); } },
-      days: getCalendar(new Date(projectStartDate), NUM_DAYS, false),
 
       '': [
 
@@ -630,7 +633,7 @@ const openSubTaskEditor = $=>{
     app.destroy()
     app = undefined
   }
-  app = RenderApp(document.body, $$GanttSubTaskEditor({parent: $.this, projectStartDate: $.scope.project?.startDate, activityStartIndex: $.scope.activity.start, subtask: $.scope.subtask, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
+  app = RenderApp(document.body, $$GanttSubTaskEditor({parent: $.this, days: $.scope.proj_days, projectStartDate: $.scope.project?.startDate, activityStartIndex: $.scope.activity.start, subtask: $.scope.subtask, onConfirm: onConfirm, onCancel: onCancel, onDelete: onDelete}))
 }
 
 
@@ -647,17 +650,28 @@ const todosGroupedByDueTo = (todos) => {
   }
   return Object.values(todos_map)
 } 
-const TodoMarker = { span: { meta: {forEach: 'todo', of: $ => todosGroupedByDueTo(($.scope.visible_todos ?? []).filter(t => (t.due_to ?? 0) > 0 )) }, // filter only available
+const TodoMarker = { span: { meta: {forEach: 'todo', of: $ => $.le.show_todo_graph_filter.show ? todosGroupedByDueTo(($.scope.visible_todos ?? []).filter(t => (t.due_to ?? 0) > 0 )) : [] }, // filter only available
 
   style: $ => ({
     width: (1+((1/3) * DAY_SIZE_PX))+"px",
     height: (1+((1/3) * DAY_SIZE_PX))+"px",
     left: ((DAY_SIZE_PX * (($.meta.todo.due_to ?? 0)))-0.5-((2/3) * DAY_SIZE_PX))+"px",
     top: "-2px",
-    background: $.meta.todo.done ? 'green' : 'black',
+    background: $.meta.todo.done ? green : 'black',
     position: 'absolute', 
     borderRadius: '100%',
     visibility: $.meta.todo.due_to > 0 ? 'visible':'hidden'
+  })
+}}
+
+const TodosProgressBar = { div: { meta: {if: $ => $.le.show_todo_graph_filter.show && $.meta.subtask.todos?.length > 0},
+  style: $ => ({
+    width: 'max(3px, ' + ($.scope.completion_perc*100) + '%)',
+    height: '3px',
+    background: $.scope.completion_perc === 0 || $.scope.completion_perc === 1 ? '#00800055': '#00000055' ,
+    position: 'absolute',
+    left: '0px',
+    top: '0px'
   })
 }}
 
@@ -754,7 +768,7 @@ const GanttRowActivityHeader = { div: {
     }}
   ],
 
-  a_style: "width: "+HEDADER_WIDTH+"px; display: inline-block; min-height: "+ROW_HEIGHT+"px; position: sticky; left: calc(200px + 16px + 16px); z-index: 999; background: white;"
+  a_style: "width: "+HEDADER_WIDTH+"px; display: inline-block; min-height: "+ROW_HEIGHT+"px; position: sticky; left: calc(200px + 16px + 13px); z-index: 999; background: white; padding-top: 25px; margin-top: -25px;"
 
 }}
 const GanttRowActivityGraph = { div: {
@@ -812,7 +826,7 @@ const GanttRowActivityGraph = { div: {
 
   '': [
 
-    { span: { 
+    { span: { meta: {if: $ => $.le.show_activity_name_filter.show_names},
 
       def_openActivityEditor: openActivityEditor,
 
@@ -846,7 +860,7 @@ const GanttRowActivityGraph = { div: {
             
           let base_position = $.scope.subtask.idx/DAY_SIZE_PX;
           let activityStartIndex = $.scope.activity.start
-          let days = getCalendar(new Date($.scope.project?.startDate), NUM_DAYS, false)
+          let days = $.scope.proj_days
           let get_todo_due_date_as_txt = (todo)=>{ 
             return (todo.due_to ?? 0) > 0 ? 
               ' [' + "20"+(days[parseInt(base_position)+parseInt(activityStartIndex) + parseInt(todo.due_to ?? 0)-1]?.date_str.replaceAll("-", "/") ?? ' - err') +'] ' 
@@ -859,7 +873,7 @@ const GanttRowActivityGraph = { div: {
         const todos_part = todos 
         const description_part = $.le.show_in_popup_filter.shuld_show_notes() ? $.scope.subtask.description : ''
 
-        $.le.popover_service.show(todos_part + (todos_part + description_part ? "\n" : '') + description_part) // todo: better use array, filter '', join '\n'
+        $.le.popover_service.show(($.scope.completion_perc >= 0 && todos_part ? "Done: "+($.scope.completion_done)+" of "+($.scope.completion_total)+" - "+($.scope.completion_perc*100).toFixed(1)+'%\n\n' : '') + todos_part + (todos_part + description_part ? "\n" : '') + description_part) // todo: better use array, filter '', join '\n'
       },
       handle_onmouseout: $ => {
         $.le.popover_service.hide()
@@ -870,15 +884,17 @@ const GanttRowActivityGraph = { div: {
         const is_visible_by_tag_filter = ()=>{
           const selected_by_tags = $.le.tags_filter.selected;
           const selected_by_status = $.le.tags_status_filter.selected;
+          const selected_by_due_to = $.le.due_to_filter.selected;
           
-          if (selected_by_tags.length === 0 && selected_by_status.length === 0){
+          if (selected_by_tags.length === 0 && selected_by_status.length === 0 && selected_by_due_to === 'All'){
             return true
           } 
 
           for (let todo of $.meta.subtask.todos ?? []){
             for (let tag of todo.tags){
               if ((selected_by_tags.length === 0 || (selected_by_tags.length > 0 && selected_by_tags.includes(tag))) && 
-                  (selected_by_status.length === 0 || (selected_by_status.length > 0 && selected_by_status.includes(todo.done ? 'Done' : 'To-Do'))) ){
+                  (selected_by_status.length === 0 || (selected_by_status.length > 0 && selected_by_status.includes(todo.done ? 'Done' : 'To-Do'))) &&
+                  (selected_by_due_to === 'All' || (selected_by_due_to === 'Planned' && todo.due_to > 0 ) || (selected_by_due_to === 'Not Planned' && (todo.due_to <= 0 || todo.due_to === undefined) )) ){
                 return true
               }
             } 
@@ -937,34 +953,42 @@ const GanttRowActivityGraph = { div: {
       let_visible_todos: $ => {
         const selected_by_tags = $.le.tags_filter.selected;
         const selected_by_status = $.le.tags_status_filter.selected;
+        const selected_by_due_to = $.le.due_to_filter.selected;
         const todos = $.meta.subtask.todos ?? []
 
-        const sorted = (todos)=>todos.toSorted((a,b)=>(a.due_to ?? Number.MAX_SAFE_INTEGER) - (b.due_to ?? Number.MAX_SAFE_INTEGER)) // without a due to at the end
-        
-        if (selected_by_tags.length === 0 && selected_by_status.length === 0){
-          return sorted(todos)
+        if (selected_by_tags.length === 0 && selected_by_status.length === 0 && selected_by_due_to === 'All'){
+          return sort_todos(todos)
         } 
         else {
           const filtered_todos = todos.filter(todo => {
 
             let with_status_condition = selected_by_status.length === 0 || 
                                         (selected_by_status.length > 0 && selected_by_status.includes(todo.done ? 'Done' : 'To-Do'));
-            
+
+            let with_due_to_condition = (selected_by_due_to === 'All' || 
+                                        (selected_by_due_to === 'Planned' && todo.due_to > 0 ) || 
+                                        (selected_by_due_to === 'Not Planned' && (todo.due_to <= 0 || todo.due_to === undefined) ));
+
             let with_tags_condition = todo.tags.filter(tag => 
                                         selected_by_tags.length === 0 || 
                                         (selected_by_tags.length > 0 && selected_by_tags.includes(tag))
                                       ).length > 0;
 
-            return with_tags_condition && with_status_condition
+            return with_tags_condition && with_due_to_condition && with_status_condition
 
           })
-          return sorted(filtered_todos)
+          return sort_todos(filtered_todos)
         }
       },
 
+      let_completion_done: $ => $.scope.visible_todos?.filter(t=>t.done)?.length ?? 0,
+      let_completion_total: $ => $.meta.subtask.todos?.length,
+      let_completion_perc: $ => $.scope.completion_done / ($.scope.completion_total ?? -1),
+
       text: [
         f`@subtask.name`,
-        TodoMarker
+        TodosProgressBar,
+        TodoMarker,
       ],
 
       a_style: $=>({
@@ -1043,6 +1067,7 @@ const GanttRow = { div: {   meta: {forEach: "activity", of: f`@activities || []`
     display: "flex",
     alignItems: "center",
     // marginBottom: "10px",
+    position: 'relative',
     borderTop: "0.5px solid black",
     borderBottom: $.meta.isLast ? "0.5px solid black" : "none",
     paddingTop:  $.is_visible ? "25px" : '0px',
@@ -1076,31 +1101,55 @@ const GanttRows  = { div: {
         }),
       })
     ),
+    
+    { div: {
+      a_style: "position: fixed;top: 0px;left: 230px;width: 300px;",
+      '': [
+        { div: {
+          style: {
+            height: '100vh',
+            position: 'absolute',
+            width: '300px',
+            bottom: '0px',
+            zIndex: '999',
+            background: 'white',
+            top: '0px',
+            opacity: 0.8
+          }
+        }}
+      ]
+    }},
 
     GanttRow,
 
-    { button: {
+    { div: {
+      a_style: "margin-top: 5px; position: relative;",
 
-      text: "Add",
+      '': [
+        { button: {
 
-      def_openActivityCreator: $=>{
-        let app;
+          text: "Add",
 
-        let onConfirm = (edits)=>{
-          $.le.api.addActivity($.scope.project.id, edits.name, edits.color, edits.start, edits.len, edits.subtasks_default_color, edits.subtasks)
-          app.destroy()
-          app = undefined
-        }
-        let onCancel = ()=>{
-          app.destroy()
-          app = undefined
-        }
-        app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, activity: {name: "New..", color: green, start: 0, len: 5, subtasks_default_color: 'orange', subtasks: []}, onConfirm: onConfirm, onCancel: onCancel}))
-      },
-      handle_onclick: $=>$.this.openActivityCreator(),
+          def_openActivityCreator: $=>{
+            let app;
 
-      a_style: "width: "+(HEDADER_WIDTH-5)+"px; margin-top: 5px; position: relative;"
-    }}
+            let onConfirm = (edits)=>{
+              $.le.api.addActivity($.scope.project.id, edits.name, edits.color, edits.start, edits.len, edits.subtasks_default_color, edits.subtasks)
+              app.destroy()
+              app = undefined
+            }
+            let onCancel = ()=>{
+              app.destroy()
+              app = undefined
+            }
+            app = RenderApp(document.body, $$GanttActivityEditor({parent: $.this, days: $.scope.proj_days, activity: {name: "New..", color: green, start: 0, len: 5, subtasks_default_color: 'orange', subtasks: []}, onConfirm: onConfirm, onCancel: onCancel}))
+          },
+          handle_onclick: $=>$.this.openActivityCreator(),
+
+          a_style: "width: "+(HEDADER_WIDTH-5)+"px; position: sticky; left: calc(200px + 16px + 16px)"
+        }}
+      ]
+    }},
   ],
 
   a_style: "width: 100%; display: block; padding-top: 55px; position: relative"
@@ -1144,7 +1193,7 @@ const GanttHeader = { div: {    meta: { if: $=>$.scope.project!==undefined},
     //   a_style: "width: "+DAY_SIZE_PX+"px; height: 100%; display: inline-block; font-size: 10px; border-left: 1px dashed #00000055",
     // }},
     
-    { div: {   meta: {forEach: "month", of: $=>getCalendar(new Date($.scope.project?.startDate), NUM_DAYS, true)},
+    { div: {   meta: {forEach: "month", of: $=>$.scope.proj_months},
 
       '': [
         { div: {
@@ -1210,7 +1259,7 @@ const PopOverService = { Controller: { meta: {hasViewChilds: true},
     },
     hide: $ => { 
       clearTimeout($.this.timeout)
-      $.this.timeout = setTimeout(()=>{ $.this.content = undefined}, 600) 
+      $.this.timeout = setTimeout(()=>{ $.this.content = undefined}, 300) 
     },
   },
   
@@ -1399,7 +1448,7 @@ const ActivityFilter = () => {
   )
 }
 
-const ShoInPopupSelector = () => {
+const ShowInPopupSelector = () => {
 
   return (
     cle.div({},
@@ -1461,6 +1510,115 @@ const ShoInPopupSelector = () => {
   )
 }
 
+const ShowActivityNameOnGraphSelector = () => {
+
+  return (
+    cle.div({},
+      
+      FlexSpacedRow({},
+        { h6: "Name In Graph"},
+        { button: { onclick: $ => $.le.show_activity_name_filter.selected = 'Yes', text: 'x'}}
+      ),
+
+      cle.div({
+        id: "show_activity_name_filter",
+        
+        let:{
+          selected: 'Yes',
+          filtering: $ => $.scope.selected !== undefined,
+          show_names: $ => $.this.selected === 'Yes'
+        },
+
+        on_scope_projectChanged: $ => {
+          if ($.scope.selected !== undefined){
+            $.scope.selected = $.scope.selected
+          }
+        }
+      },
+        cle.select({ a_value: $=>$.scope.selected, h_onchange: ($, e)=>{ $.scope.selected = e.target.value}, class: "browser-default", style:'height: 2.5rem;'},
+          cle.option({ meta: {forEach: 'val', of: ['Yes', 'No']}, 
+            ha_value: $=>$.val, 
+            ha_selected: $=>$.scope.selected === $.val, 
+          }, $ => $.val)
+        )
+      )
+    )
+  )
+}
+
+const ShowTodoStatusOnGraphSelector = () => {
+
+  return (
+    cle.div({},
+      
+      FlexSpacedRow({},
+        { h6: "Todos In Graph"},
+        { button: { onclick: $ => $.le.show_todo_graph_filter.selected = $.le.show_todo_graph_filter.initial, text: 'x'}}
+      ),
+
+      cle.div({
+        id: "show_todo_graph_filter",
+        
+        let:{
+          initial: 'Yes',
+          selected: $ => $.scope.initial,
+          filtering: $ => $.scope.selected !== undefined,
+          show: $ => $.this.selected === 'Yes'
+        },
+
+        on_scope_projectChanged: $ => {
+          if ($.scope.selected !== undefined){
+            $.scope.selected = $.scope.selected
+          }
+        }
+      },
+        cle.select({ a_value: $=>$.scope.selected, h_onchange: ($, e)=>{ $.scope.selected = e.target.value}, class: "browser-default", style:'height: 2.5rem;'},
+          cle.option({ meta: {forEach: 'val', of: ['Yes', 'No']}, 
+            ha_value: $=>$.val, 
+            ha_selected: $=>$.scope.selected === $.val, 
+          }, $ => $.val)
+        )
+      )
+    )
+  )
+}
+
+const DueToFilter = () => {
+
+  return (
+    cle.div({},
+      
+      FlexSpacedRow({},
+        { h6: "Filter By Plannig"},
+        { button: { onclick: $ => $.le.due_to_filter.selected = 'All', text: 'x'}}
+      ),
+
+      cle.div({
+        id: "due_to_filter",
+        
+        let:{
+          selected: 'All',
+          filtering: $ => $.scope.selected !== undefined,
+          show_dueto_only: $ => $.this.selected === 'Planned'
+        },
+
+        on_scope_projectChanged: $ => {
+          if ($.scope.selected !== undefined){
+            $.scope.selected = $.scope.selected
+          }
+        }
+      },
+        cle.select({ a_value: $=>$.scope.selected, h_onchange: ($, e)=>{ $.scope.selected = e.target.value}, class: "browser-default", style:'height: 2.5rem;'},
+          cle.option({ meta: {forEach: 'val', of: ['All', 'Planned', 'Not Planned']}, 
+            ha_value: $=>$.val, 
+            ha_selected: $=>$.scope.selected === $.val, 
+          }, $ => $.val)
+        )
+      )
+    )
+  )
+}
+
 
 export const GanttPage = async (state)=>{ console.log("STATE:", state); return { 
   div: {
@@ -1473,6 +1631,22 @@ export const GanttPage = async (state)=>{ console.log("STATE:", state); return {
     let_project: undefined,
     let_project_tags: [],
     let_today: (()=>{ let d = new Date; return (d.getFullYear()-2000) +"-"+ (d.getMonth()+1) +"-"+ (d.getDate())})(),
+
+    // todo: cachare
+    let_dyn_props_cache: {},
+    let_proj_months: $ => {
+      if($['this']['dyn_props_cache']['proj_months'] !== $.scope.project?.startDate){
+        $['this']['dyn_props_cache']['proj_months'] = getCalendar(new Date($.scope.project?.startDate), NUM_DAYS, true)
+      }
+      return $['this']['dyn_props_cache']['proj_months']
+    },
+    let_proj_days: $ => {
+      if($['this']['dyn_props_cache']['proj_days'] !== $.scope.project?.startDate){
+        // console.log("SET dyn_props_cache proj_days")
+        $['this']['dyn_props_cache']['proj_days'] = getCalendar(new Date($.scope.project?.startDate), NUM_DAYS, false)
+      }
+      return $['this']['dyn_props_cache']['proj_days']
+    },
 
     let_lastupdate: 0,
     let_lastupdate_date: $ => (($.this.lastupdate === 0 ? new Date() : new Date($.this.lastupdate)).toString()),
@@ -1491,6 +1665,8 @@ export const GanttPage = async (state)=>{ console.log("STATE:", state); return {
       console.log($.this.projects)
       console.log($.this.project)      
       await $.le.api.getProjectTags($.project.id);
+
+      // console.log("$.proj_days, $.proj_months", $.proj_days, $.proj_months)
     },
 
     '':[
@@ -1550,9 +1726,15 @@ export const GanttPage = async (state)=>{ console.log("STATE:", state); return {
             { hr: {}},
             NotesSelector(),
             { hr: {}},
+            DueToFilter(),
+            { hr: {}},
+            ShowInPopupSelector(),
+            { hr: {}},
             TypeFilter(),
             { hr: {}},
-            ShoInPopupSelector(),
+            ShowActivityNameOnGraphSelector(),
+            { hr: {}},
+            ShowTodoStatusOnGraphSelector(),
             { hr: {}},
             RoutingButtonLink("Open Shared Notes", $=>["notes", {projId: $.project.id}]),
             RoutingButtonLink("Open Shared Todolist", $=>["todolist", {projId: $.project.id}]),
