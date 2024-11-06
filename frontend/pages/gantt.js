@@ -338,7 +338,7 @@ const TodosComponent = ()=>({ div: {
           onDrop($, drop_target_$, evt){
             evt.preventDefault();
             
-            console.log("DROP!!", evt.dataTransfer.getData("idx"), evt)
+            // console.log("DROP!!", evt.dataTransfer.getData("idx"), evt)
 
             let draggedIdx = parseInt(evt.dataTransfer.getData("idx"))
             let draggedTodo = $.scope.todos[draggedIdx]
