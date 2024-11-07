@@ -1847,7 +1847,7 @@ export const GanttPage = async (state)=>{ console.log("STATE:", state); return {
 
         NavbarContents:[
           { spanù: { text: " ", a_style: "font-size: 1.9rem; margin-left: 5px;" }},
-          { span: { meta: {if: $ => $.scope.pywebviewReady}, '': [              
+          { span: { meta: {if: $ => $.scope.pywebviewReady}, style: 'position: sticky; left: 250px;', '': [              
             { span: { text: ["Last Disk Reload: ", $ => $.scope.lastupdate_date?.split("GMT")?.[0]], a_style: "margin-right: 15px;" }},
             { span: { meta:{if: $ => $.scope.should_reload}, text: ["Should Reload"], a_style: $ => ({color: $.scope.should_reload ? '#f38b8b' : null, marginRight: '15px'})}},
             { button: {text: "Backup", h_onclick: $=>{$.le.api.storeBackup()}, a_style: "background: #cccccc33; border: 0.25px dashed #dddddd; padding: 5px;color: #dddddd; cursor: pointer;margin-right: 15px;"}},
