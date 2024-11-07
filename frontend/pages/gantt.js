@@ -910,7 +910,7 @@ const GanttRowActivityHeader = { div: {
                   app.destroy()
                   app = undefined
                 }
-                app = RenderApp(document.body, $$GanttActivityEditor({is_new: true, parent: $.this, days: $.scope.proj_days, activity: {name: $.scope.activity.name + " / new ", color: $.scope.activity.color, start: ($.scope.activity.start ?? 0) + ($.scope.activity.len ?? 1), len: 15, subtasks_default_color: $.scope.activity.subtasks_default_color, subtasks: []}, onConfirm: onConfirm, onCancel: onCancel}))
+                app = RenderApp(document.body, $$GanttActivityEditor({is_new: true, parent: $.this, days: $.scope.proj_days, activity: {name: $.scope.activity.name + " / new ", color: $.scope.activity.color, start: (+($.scope.activity.start ?? 0)) + (+($.scope.activity.len ?? 1)), len: 15, subtasks_default_color: $.scope.activity.subtasks_default_color, subtasks: []}, onConfirm: onConfirm, onCancel: onCancel}))
               },
               
               a_style: "width: 25px; margin-left: 5px; border: 1px solid #dddddd; border-radius: 20px; background: none; cursor: pointer"
